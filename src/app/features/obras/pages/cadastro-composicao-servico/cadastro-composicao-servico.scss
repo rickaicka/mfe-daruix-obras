@@ -1,0 +1,863 @@
+:host {
+  display: flex;
+  flex: 1 0 auto;
+  flex-direction: column;
+
+  width: 100%;
+  min-width: 0;
+  min-height: 100%;
+
+  overflow: visible;
+
+  ::ng-deep {
+    .composicao-servico-dashboard__container {
+      drx-card-square {
+        .all__children {
+          border: none;
+        }
+
+        .all__card-header {
+          button {
+            cursor: default;
+          }
+        }
+
+        .card__content {
+          display: flex;
+          align-items: flex-start;
+          justify-content: flex-start;
+          gap: 16px;
+        }
+
+        .table-composicao-container {
+          display: block;
+
+          width: 100%;
+          min-height: 200px;
+          margin-bottom: 0;
+          box-sizing: border-box;
+
+          color: var(--ex-gray-scale-900, #14142b);
+          font-family: var(--drx-font-family-heading);
+          font-size: 14px;
+
+          background: var(--ex-gray-scale-100, #fff);
+          border: 1px solid var(--ex-gray-scale-400, #d6d8e7);
+          border-radius: 8px;
+          outline: none;
+
+          transition:
+            border-color 0.2s ease-in-out,
+            box-shadow 0.2s ease-in-out;
+
+          &--header {
+            width: 100%;
+
+            background-color: var(--drx-card-border-color);
+            border-bottom: 1px solid var(--ex-gray-scale-400, #d6d8e7);
+
+            ul {
+              display: flex;
+              align-items: center;
+              justify-content: space-evenly;
+              gap: 16px;
+
+              margin: 0;
+              padding: 0;
+
+              list-style: none;
+
+              li {
+                width: 175px;
+                padding: 16px 0;
+
+                text-align: center;
+
+                &:first-child {
+                  width: 560px;
+                  padding-left: 8px;
+                  text-align: left;
+                }
+
+                &:last-child {
+                  width: 100px;
+                  padding-right: 8px;
+                }
+              }
+
+              .divider-vertical {
+                width: 2px;
+                height: 50px;
+
+                background-color: var(--drx-divider-color);
+              }
+            }
+          }
+
+          &--novo-item {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+
+            width: 100%;
+            height: 50px;
+            margin-top: 8px;
+            box-sizing: border-box;
+
+            background-color: transparent;
+            border: 2px dotted #2d9ffc;
+            border-radius: 8px;
+
+            app-hub-icon,
+            span {
+              color: #2d9ffc;
+            }
+          }
+
+          &--itens {
+            .item-composicao {
+              ul {
+                display: flex;
+                align-items: center;
+                justify-content: space-evenly;
+                gap: 16px;
+
+                margin: 0;
+                padding: 0;
+
+                list-style: none;
+
+                li {
+                  width: 175px;
+                  padding: 16px 0;
+
+                  text-align: center;
+
+                  &:first-child {
+                    width: 560px;
+                    text-align: left;
+                  }
+
+                  &:last-child {
+                    width: 100px;
+                    padding-right: 8px;
+                  }
+
+                  drx-autocomplete {
+                    input {
+                      padding: 8px 44px !important;
+                    }
+                  }
+
+                  input {
+                    width: 100%;
+                    height: 44px;
+                    padding: 8px 12px;
+                    box-sizing: border-box;
+
+                    color: var(--ex-gray-scale-900, #14142b);
+                    font-family: var(--drx-font-family-heading);
+                    font-size: 14px;
+
+                    background: var(--ex-gray-scale-100, #fff);
+                    border: 1px solid var(--ex-gray-scale-400, #d6d8e7);
+                    border-radius: 8px;
+                    outline: none;
+
+                    transition:
+                      border-color 0.2s ease-in-out,
+                      box-shadow 0.2s ease-in-out;
+
+                    &.item-composicao__source-value {
+                      color: var(--ex-gray-scale-700, #4e4b66);
+                      background: var(--ex-gray-scale-200, #f7f7fc);
+                      cursor: not-allowed;
+                    }
+                  }
+                }
+              }
+            }
+          }
+
+          &--empty {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+
+            min-height: 100px;
+            padding: 24px;
+
+            color: var(--ex-gray-scale-700, #4e4b66);
+          }
+        }
+      }
+    }
+
+    .composicao-servico-dashboard__container__feature {
+      display: block;
+      width: 100%;
+    }
+
+    .footer-container-save {
+      .drx-button {
+        &--primary,
+        &--secondary {
+          border: 2px solid transparent;
+        }
+
+        &--tertiary {
+          border: 2px solid
+          var(--drx-button-tertiary-color, var(--drx-color-primary));
+        }
+      }
+    }
+
+    @media (max-width: 600px) {
+      .footer-container-save {
+        .drx-button {
+          width: 100%;
+        }
+      }
+    }
+  }
+}
+
+.composicao-servico-dashboard {
+  display: flex;
+  flex: 1 0 auto;
+  flex-direction: column;
+
+  width: 100%;
+  min-width: 0;
+  min-height: 100%;
+
+  padding: 32px 32px 24px;
+  box-sizing: border-box;
+
+  overflow: visible;
+
+  &__title {
+    flex: 0 0 auto;
+
+    h1 {
+      margin: 0;
+
+      font-family: var(--drx-font-family-display);
+      font-size: var(--drx-font-size-title-md);
+    }
+
+    p {
+      margin: 8px 0 0;
+      color: var(--ex-gray-scale-700);
+    }
+  }
+
+  &__container {
+    display: flex;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 16px;
+
+    width: 100%;
+    min-width: 0;
+
+    margin-top: 32px;
+    margin-bottom: 24px;
+
+    &__dados-composicao-servico,
+    &__feature {
+      flex: 0 0 100%;
+
+      width: 100%;
+      min-width: 0;
+    }
+
+    &__dados-composicao-servico {
+      position: relative;
+      z-index: 10;
+
+      overflow: visible;
+    }
+  }
+
+  @media (max-width: 900px) {
+    padding: 24px 20px;
+  }
+
+  @media (max-width: 600px) {
+    padding: 20px 16px 16px;
+  }
+}
+
+.composicao-servico-card {
+  &__field-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+
+    &__field {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+
+      width: 100%;
+      min-width: 0;
+
+      &__input-container {
+        flex: 1 1 642px;
+        min-width: 0;
+
+        input,
+        select,
+        textarea {
+          width: 100%;
+          padding: 8px;
+          box-sizing: border-box;
+
+          border: 1px solid var(--drx-brand-secondary-hover);
+          border-radius: 8px;
+
+          &.error-border {
+            border-color: var(--drx-brand-primary);
+          }
+        }
+
+        textarea {
+          min-height: 125px;
+          resize: none;
+          field-sizing: content;
+        }
+      }
+    }
+  }
+
+  &__error {
+    margin-top: 8px;
+    color: var(--drx-brand-primary);
+  }
+}
+
+.wrapper-label {
+  display: flex;
+  flex: 0 0 285px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 24px;
+
+  min-width: 0;
+
+  label {
+    font-size: 14px;
+  }
+
+  @media (max-width: 600px) {
+    flex: 1 1 100%;
+
+    width: 100%;
+  }
+}
+
+.drx-button {
+  &--font-gothic {
+    font-family: var(--drx-font-family-brand);
+  }
+}
+
+.drx-header-table {
+  &--font-gothic {
+    font-family: var(--drx-font-family-brand);
+    font-size: var(--drx-font-size-body-sm);
+  }
+}
+
+#unit_measure {
+  width: 100%;
+  height: 44px;
+  margin-top: 7px;
+  padding: 8px 12px;
+  box-sizing: border-box;
+
+  color: var(--ex-gray-scale-900, #14142b);
+  font-family: var(--drx-font-family-heading);
+  font-size: 14px;
+
+  background: var(--ex-gray-scale-100, #fff);
+  border: 1px solid var(--ex-gray-scale-400, #d6d8e7);
+  border-radius: 8px;
+  outline: none;
+
+  transition:
+    border-color 0.2s ease-in-out,
+    box-shadow 0.2s ease-in-out;
+}
+
+.table-composicao-wrapper {
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+
+  drx-editable-table {
+    display: block;
+    min-width: 1200px;
+  }
+}
+
+.composition-cost-hint {
+  margin: 0 0 12px;
+  line-height: 1.5;
+  color: var(--ex-gray-scale-700, #4e4b66);
+}
+
+.actions-btn-table {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+
+  button {
+    padding: 0;
+
+    border: 0;
+    cursor: pointer;
+
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.45;
+    }
+  }
+
+  &__button {
+    color: var(--ex-gray-scale-700, #4e4b66);
+    background: transparent;
+
+    &--add {
+      color: var(--ex-green-scale-400);
+      background: transparent;
+    }
+
+    &--edit {
+      color: var(--ex-blue-scale-400);
+      background: transparent;
+    }
+
+    &--delete {
+      color: var(--ex-red-scale-400);
+      background: transparent;
+    }
+  }
+}
+
+/*
+ * O wrapper ocupa uma linha inteira do container flex.
+ * O conteúdo interno é alinhado ao extremo direito.
+ */
+.composition-summary-wrapper {
+  display: flex;
+  flex: 0 0 100%;
+  align-items: flex-start;
+  justify-content: flex-end;
+
+  width: 100%;
+  min-width: 0;
+  margin-left: auto;
+}
+
+/*
+ * O card possui largura limitada no desktop e ocupa
+ * toda a largura disponível em telas menores.
+ */
+.composition-summary {
+  width: min(100%, 570px);
+  margin-left: auto;
+  padding: 16px;
+  box-sizing: border-box;
+
+  background: var(--ex-gray-scale-100, #fff);
+  border: 1px solid var(--ex-gray-scale-400, #d6d8e7);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgb(37 40 49 / 6%);
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  &__icon {
+    display: inline-flex;
+    flex: 0 0 32px;
+    align-items: center;
+    justify-content: center;
+
+    width: 32px;
+    height: 32px;
+
+    color: var(--ex-green-scale-500, #39831d);
+    font-size: 18px;
+    font-weight: 700;
+
+    background: var(--ex-green-scale-100, #e7f8e3);
+    border-radius: 50%;
+  }
+
+  &__items {
+    margin: 12px 0 16px;
+
+    color: var(--ex-gray-scale-700, #4e4b66);
+  }
+
+  &__divider {
+    width: 100%;
+    height: 1px;
+
+    background: var(--ex-gray-scale-300, #eff0f6);
+  }
+
+  &__total {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+
+    padding-top: 16px;
+  }
+
+  &__value {
+    color: var(--ex-green-scale-500, #39831d);
+    font-size: 20px;
+    white-space: nowrap;
+  }
+}
+
+.footer-container-save {
+  position: static;
+
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  width: 100%;
+  min-height: 75px;
+  margin-top: auto;
+  padding: 12px 16px;
+  box-sizing: border-box;
+
+  background-color: var(--ex-gray-scale-100, #fff);
+  border: 1px solid var(--ex-gray-scale-400);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px #2528310f;
+
+  .btns-save {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 16px;
+
+    min-width: 0;
+  }
+
+  .save-btn,
+  .cancel-btn {
+    margin: 0;
+  }
+}
+
+@media (max-width: 900px) {
+  :host {
+    ::ng-deep {
+      .table-composicao-container {
+        overflow-x: auto;
+
+        &--header,
+        &--itens {
+          min-width: 1000px;
+        }
+      }
+    }
+  }
+}
+
+@media (max-width: 600px) {
+  .composition-summary-wrapper {
+    margin-left: 0;
+  }
+
+  .composition-summary {
+    width: 100%;
+    margin-left: 0;
+    padding: 14px;
+
+    &__total {
+      align-items: flex-start;
+    }
+
+    &__value {
+      font-size: 18px;
+    }
+  }
+
+  .footer-container-save {
+    flex-direction: column-reverse;
+    align-items: stretch;
+
+    padding: 12px;
+
+    .btns-save {
+      flex-direction: column;
+
+      width: 100%;
+    }
+
+    .save-btn,
+    .cancel-btn {
+      display: block;
+
+      width: 100%;
+    }
+  }
+}
+
+/*
+ * Tabela de itens com o mesmo
+ * DrxEditableTable usado na planilha.
+ */
+:host ::ng-deep drx-editable-table {
+  display: block;
+
+  width: 100%;
+  min-width: 0;
+
+  .composition-item-editor,
+  .composition-item-editor drx-autocomplete,
+  .composition-item-editor .autocomplete {
+    display: block;
+
+    width: 100%;
+    min-width: 0;
+  }
+
+  .composition-number-input,
+  .composition-disabled-input {
+    display: block;
+
+    width: 100%;
+    min-width: 0;
+    min-height: 42px;
+
+    padding: 8px 10px;
+    box-sizing: border-box;
+
+    border: 1px solid
+    var(
+      --ex-gray-scale-400,
+      #d6d8e7
+    );
+
+    border-radius: 7px;
+
+    outline: 0;
+
+    color:
+      var(
+        --ex-gray-scale-900,
+        #14142b
+      );
+
+    background:
+      var(
+        --ex-gray-scale-100,
+        #fff
+      );
+
+    font-family:
+      var(
+        --drx-font-family-base,
+        'Quicksand',
+        Arial,
+        sans-serif
+      );
+
+    font-size:
+      var(
+        --drx-font-size-body-sm,
+        13px
+      );
+
+    line-height: 1.25;
+  }
+
+  .composition-number-input {
+    text-align: right;
+
+    font-variant-numeric:
+      tabular-nums;
+
+    &:focus-visible {
+      border-color:
+        var(
+          --drx-brand-primary,
+          #c00d0e
+        );
+
+      box-shadow:
+        0 0 0 3px
+        rgb(192 13 14 / 12%);
+    }
+  }
+
+  .composition-disabled-input {
+    color:
+      var(
+        --ex-gray-scale-600,
+        #98a2b3
+      ) !important;
+
+    background:
+      var(
+        --ex-gray-scale-200,
+        #f5f6f8
+      ) !important;
+
+    cursor: not-allowed;
+
+    text-align: center;
+
+    opacity: 1;
+  }
+
+  .composition-disabled-input--money {
+    text-align: right;
+
+    font-variant-numeric:
+      tabular-nums;
+  }
+
+  .drx-editable-table__cell--right {
+    font-variant-numeric:
+      tabular-nums;
+  }
+
+  .drx-editable-table__scroll {
+    border-radius: 8px;
+  }
+}
+
+.composition-enter-hint {
+  display: flex;
+
+  align-items: center;
+
+  gap: 8px;
+
+  margin: 9px 0 0;
+
+  color:
+    var(
+      --ex-gray-scale-700,
+      #6e7890
+    );
+
+  kbd {
+    padding: 2px 5px;
+
+    font-size: 11px;
+
+    background:
+      var(
+        --ex-gray-scale-100,
+        #fff
+      );
+
+    border: 1px solid
+    var(
+      --ex-gray-scale-500,
+      #b9c0cc
+    );
+
+    border-radius: 4px;
+  }
+}
+
+/* ========================================================================== */
+/* Correção de layout — card "Itens da composição"                           */
+/* ========================================================================== */
+:host {
+  ::ng-deep {
+    .composicao-servico-dashboard__container__feature {
+      width: 100%;
+      min-width: 0;
+
+      /* O CardSquare usa flex por padrão. Neste card, hint e tabela precisam
+       * ficar empilhados; caso contrário a tabela é comprimida à direita. */
+      .card__content {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        justify-content: flex-start;
+        gap: 12px;
+
+        width: 100%;
+        min-width: 0;
+      }
+
+      .composition-cost-hint {
+        flex: 0 0 auto;
+        width: 100%;
+        max-width: none;
+        margin: 0;
+        box-sizing: border-box;
+      }
+
+      .table-composicao-wrapper {
+        display: block;
+        flex: 1 1 auto;
+
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+        overflow-x: auto;
+        overflow-y: visible;
+
+        drx-editable-table {
+          display: block;
+          width: 100%;
+          min-width: 1180px;
+        }
+      }
+    }
+  }
+}
+
+@media (max-width: 900px) {
+  :host {
+    ::ng-deep {
+      .composicao-servico-dashboard__container__feature {
+        .card__content {
+          gap: 10px;
+        }
+
+        .table-composicao-wrapper drx-editable-table {
+          min-width: 1080px;
+        }
+      }
+    }
+  }
+}
+
+
+.composition-tree-badge {
+  display: inline-block;
+  margin-inline-start: 6px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  color: #5f07f6;
+  background: #eee7ff;
+  font-size: 11px;
+}
+.composition-tree-readonly { font-size: 11px; color: var(--ex-gray-scale-700, #4e4b66); }

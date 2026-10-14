@@ -1,1 +1,51 @@
-<p>obras-list works!</p>
+<section class="obras-dashboard">
+  <section class="obras-dashboard__title">
+    <h1>Obras</h1>
+
+    <p class="quicksand-m">
+      Planejamento, execução, controle de obras, mão de obra e serviços.
+    </p>
+  </section>
+
+  <section class="obras-dashboard__container">
+    @for (
+      feat of features();
+      track feat.slug
+      ) {
+      <drx-card-square
+        [nome]="feat.nome"
+        [icone]="feat.icone"
+        [color]="feat.cor_icone"
+        contentVariant="outlined"
+        class="obras-dashboard__container__feature"
+      >
+        <drx-card-list>
+          @for (
+            child of feat.children;
+            track child.slug
+            ) {
+            <drx-card-list-item
+              [label]="child.nome"
+              [clickable]="true"
+              [showArrow]="true"
+              [favoriteEnabled]="true"
+              [favorite]="itemIsFavorite(child)"
+              (itemClick)="
+                navigation.navigateRoute(
+                  child.rota,
+                  feat
+                )
+              "
+              (favoriteChange)="
+                toggleFavorite(
+                  $event,
+                  child
+                )
+              "
+            />
+          }
+        </drx-card-list>
+      </drx-card-square>
+    }
+  </section>
+</section>

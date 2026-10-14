@@ -1,0 +1,401 @@
+<section class="composicao-servico-dashboard">
+  <section class="composicao-servico-dashboard__title">
+    <h1>Composição de Serviço</h1>
+
+    <p class="quicksand-m">
+      Cadastre insumos e subcomposições, com suas quantidades e custos.
+    </p>
+  </section>
+
+  <section class="composicao-servico-dashboard__container">
+    <drx-card-square
+      class="composicao-servico-dashboard__container__dados-composicao-servico"
+      [nome]="'Dados da composição'"
+      [icone]="'clipboard-list'"
+      [color]="moduleColor"
+    >
+      <drx-autocomplete
+        label="Buscar composição por nome"
+        placeholder="Digite o nome da composição"
+        hint="Selecione uma composição existente ou crie uma nova quando ela não for encontrada."
+        emptyText="Nenhuma composição encontrada."
+        loadingText="Buscando composições..."
+        loadingMoreText="Carregando mais composições..."
+        loadMoreErrorText="Não foi possível carregar mais composições."
+        errorText="Não foi possível consultar as composições."
+        [minimumSearchLength]="3"
+        [debounceMs]="300"
+        [pageSize]="20"
+        [loadMoreThreshold]="64"
+        [disabled]="creatingFromSearch() || loadingComposition()"
+        [search]="searchSupplies"
+        [displayWith]="displaySupply"
+        [secondaryText]="supplyDetails"
+        [identifyBy]="identifySupply"
+        [value]="selectedSupply()"
+        (selected)="onSupplySelected($event)"
+        (cleared)="onSupplyCleared()"
+      />
+
+      <div class="composicao-servico-card__field-wrapper__field">
+        <div class="wrapper-label">
+          <label for="unit_measure" class="drx-button--font-gothic bolder-font">
+            Unidade de Medida
+          </label>
+        </div>
+
+        <div
+          class="composicao-servico-card__field-wrapper__field__input-container"
+        >
+          <input
+            id="unit_measure"
+            class="drx-button--font-quicksand"
+            autocomplete="off"
+            readonly
+            [value]="selectedUnitMeasureAbbreviation()"
+          />
+        </div>
+      </div>
+    </drx-card-square>
+
+    @if (canShowCompositionItems()) {
+      <drx-card-square
+        class="composicao-servico-dashboard__container__feature"
+        [nome]="'Itens da composição'"
+        [icone]="'shopping-basket'"
+        [color]="'#5F07F6'"
+        contentVariant="plain"
+      >
+        <p class="composition-cost-hint drx-font-quicksand-body-sm">Expanda as subcomposições para consultar seus componentes. As quantidades dos componentes acompanham a quantidade da linha principal. Custos sem BDI. Total por unidade = Material + Mão de obra. Custo total = Quantidade × Total por unidade. Valores de equipamentos já cadastrados também são preservados no total.</p>
+        <div class="table-composicao-wrapper">
+          <drx-editable-table
+            ariaLabel="Itens da composição de serviço"
+            [columns]="itemTableColumns"
+            [rows]="compositionItems()"
+            [rowChildren]="compositionTreeChildren"
+            [isRowExpandable]="canExpandComposition"
+            [rowChildrenStatus]="compositionTreeStatus"
+            [treeRowLabel]="compositionTreeLabel"
+            treeColumn="item"
+            [expandedRowKeys]="expandedCompositionKeys()"
+            (expandedRowKeysChange)="expandedCompositionKeys.set($event)"
+            (rowExpansionChange)="onCompositionExpansion($event)"
+            (treeExpansionChange)="onCompositionTreeExpansion($event)"
+            (rowsChange)="onCompositionRowsChange($event)"
+            [draft]="itemDraft()"
+            (draftChange)="itemDraft.set($event)"
+            [rowKey]="itemRowKey"
+            [createDraft]="createItemDraft"
+            [toDraft]="itemToDraft"
+            [createRow]="createItemRow"
+            [updateRow]="updateItemRow"
+            [validate]="validateItemDraft"
+            [findDuplicate]="findDuplicateItem"
+            duplicateStrategy="replace"
+            duplicateErrorText="Este item já existe na composição."
+            [editable]="canEditCompositionItems()"
+            [busy]="saving()"
+            [canEditRow]="canEditCompositionItem"
+            [rowState]="itemRowState"
+            [isDraftEmpty]="isItemDraftEmpty"
+            responsiveLayout="scroll"
+            emptyText="Nenhum item adicionado à composição."
+            addLabel="Adicionar item"
+            saveLabel="Salvar alteração"
+            (editStarted)="
+      onCompositionItemEditStarted($event)
+    "
+            (editCancelled)="
+      onCompositionItemEditCancelled()
+    "
+            (committed)="
+      onCompositionItemCommitted()
+    "
+            (rowRemoved)="
+      onCompositionItemRemoved(
+        $event.row
+      )
+    "
+          >
+            <ng-template drxEditableCell="item" let-row>
+              <span>{{ $any(row).description }}</span>
+              @if ($any(row).itemType === 'SUBCOMPOSITION') {
+                <span class="composition-tree-badge">Subcomposição</span>
+              }
+            </ng-template>
+            <ng-template drxEditableTreeCell="item" let-node>
+              <span>{{ node.label }}</span>
+              @if ($any(node.data).subcomposition !== null) {
+                <span class="composition-tree-badge">Subcomposição</span>
+              }
+              @if ($any(node.data).cyclic) {
+                <small>Referência circular: expansão interrompida.</small>
+              }
+            </ng-template>
+            <ng-template drxEditableTreeCell="$actions">
+              <span class="composition-tree-readonly">Consulta</span>
+            </ng-template>
+
+            <ng-template
+              drxEditableEditor="item"
+            >
+              <div
+                class="composition-item-editor"
+                drxEditableNextOnEnter
+                [attr.drxEditableAutofocus]="
+          editingClientId() === null
+            ? ''
+            : null
+        "
+              >
+                <drx-autocomplete
+                  label=""
+                  placeholder="Busque um insumo ou composição"
+                  hint=""
+                  emptyText="Nenhum insumo ou composição encontrado."
+                  loadingText="Buscando catálogo..."
+                  loadingMoreText="Carregando mais itens..."
+                  loadMoreErrorText="Não foi possível carregar mais itens."
+                  errorText="Não foi possível consultar o catálogo."
+                  [minimumSearchLength]="3"
+                  [debounceMs]="300"
+                  [pageSize]="20"
+                  [loadMoreThreshold]="64"
+                  [disabled]="
+            editingClientId() !== null
+          "
+                  [search]="
+            searchCompositionItemCatalog
+          "
+                  [displayWith]="
+            displayCompositionItem
+          "
+                  [secondaryText]="
+            compositionItemDetails
+          "
+                  [identifyBy]="
+            identifyCompositionItem
+          "
+                  [value]="
+            selectedCatalogItem()
+          "
+                  (selected)="
+            onCompositionItemSelected(
+              $event
+            )
+          "
+                  (cleared)="
+            onCompositionItemCleared()
+          "
+                />
+              </div>
+            </ng-template>
+
+            <ng-template
+              drxEditableEditor="unit"
+            >
+              <input
+                class="composition-disabled-input"
+                aria-label="Unidade de medida"
+                [value]="
+          selectedItemUnitAbbreviation() ||
+          '—'
+        "
+                disabled
+              />
+            </ng-template>
+
+            <ng-template
+              drxEditableEditor="quantity"
+              let-draft
+              let-patch="patch"
+            >
+              <input
+                class="composition-number-input"
+                type="number"
+                inputmode="decimal"
+                autocomplete="off"
+                min="0.0001"
+                step="any"
+                placeholder="0"
+                aria-label="Quantidade"
+                [attr.drxEditableNextOnEnter]="
+          !isSubcompositionDraft()
+            ? ''
+            : null
+        "
+                [attr.drxEditableCommitOnEnter]="
+          isSubcompositionDraft()
+            ? ''
+            : null
+        "
+                [attr.drxEditableAutofocus]="
+          editingClientId() !== null
+            ? ''
+            : null
+        "
+                [value]="
+          draft.quantity ?? ''
+        "
+                (input)="
+          patch({
+            quantity:
+              parseItemNumber(
+                $any(
+                  $event.target
+                ).value
+              ),
+          })
+        "
+              />
+            </ng-template>
+
+
+            <ng-template drxEditableEditor="materialUnitPrice" let-draft let-patch="patch">
+              <input class="composition-number-input" type="number" inputmode="decimal"
+                     min="0" step="any" aria-label="Custo de material por unidade"
+                     [disabled]="isSubcompositionDraft()" [value]="draft.materialUnitPrice ?? ''"
+                     drxEditableNextOnEnter
+                     (input)="patch({ materialUnitPrice: parseItemNumber($any($event.target).value) })" />
+            </ng-template>
+            <ng-template drxEditableEditor="laborUnitPrice" let-draft let-patch="patch">
+              <input class="composition-number-input" type="number" inputmode="decimal"
+                     min="0" step="any" aria-label="Custo de mão de obra por unidade"
+                     [disabled]="isSubcompositionDraft()" [value]="draft.laborUnitPrice ?? ''"
+                     drxEditableCommitOnEnter
+                     (input)="patch({ laborUnitPrice: parseItemNumber($any($event.target).value) })" />
+            </ng-template>
+            <ng-template drxEditableEditor="unitValue" let-draft>
+              <input class="composition-disabled-input composition-disabled-input--money"
+                     aria-label="Custo total por unidade calculado" [value]="draftUnitCost(draft)" disabled />
+              @if (draft.equipmentUnitPrice > 0) {
+                <small>Inclui equipamentos: {{ draft.equipmentUnitPrice | brlCurrency }}</small>
+              }
+            </ng-template>
+
+            <ng-template
+              drxEditableEditor="total"
+            >
+              <input
+                class="
+          composition-disabled-input
+          composition-disabled-input--money
+        "
+                aria-label="Total"
+                [value]="itemDraftTotal()"
+                disabled
+              />
+            </ng-template>
+          </drx-editable-table>
+
+          @if (
+            canEditCompositionItems()
+            ) {
+            <p
+              class="
+        composition-enter-hint
+        quicksand-sm
+      "
+            >
+              <kbd>Enter</kbd>
+
+              Selecione um item e use
+              Enter para avançar.
+
+              Em insumos, Enter passa de
+              Quantidade para Material e Mão de obra
+              e confirma no último campo.
+
+              Em subcomposições, o valor
+              unitário vem da composição
+              selecionada e Enter em
+              Quantidade confirma a linha.
+            </p>
+          }
+        </div>
+      </drx-card-square>
+
+      <!-- Card de resumo fora do card de itens -->
+      <div class="composition-summary-wrapper">
+        <section
+          class="composition-summary"
+          aria-labelledby="composition-summary-title"
+        >
+          <header class="composition-summary__header">
+            <app-hub-icon [name]="'wallet'"></app-hub-icon>
+
+            <strong
+              id="composition-summary-title"
+              class="drx-font-gothic-body-sm bold-font"
+            >
+              Resumo da composição
+            </strong>
+          </header>
+
+          <p class="composition-summary__items quicksand-sm">
+            {{ compositionItems().length }} {{ compositionItems().length === 1 ?
+            'item' : 'itens' }}
+          </p>
+
+          <div class="composition-summary__divider"></div>
+
+          <footer class="composition-summary__total">
+            <strong class="drx-font-gothic-body-sm bold-font">
+              Total da composição
+            </strong>
+
+            <strong
+              class="composition-summary__value drx-font-gothic-body-sm bold-font"
+            >
+              {{ compositionTotal() | brlCurrency }}
+            </strong>
+          </footer>
+        </section>
+      </div>
+    }
+  </section>
+
+  <footer class="footer-container-save">
+    <drx-button
+      class="cancel-btn"
+      [type]="'button'"
+      [font]="'gothic'"
+      [size]="'medium'"
+      [variant]="'secondary'"
+      (click)="onCancel()"
+    >
+      <app-hub-icon [name]="'circle-slash'" />
+
+      <p>Cancelar</p>
+    </drx-button>
+
+    <div class="btns-save">
+      <drx-button
+        [type]="'button'"
+        [font]="'gothic'"
+        [size]="'medium'"
+        [variant]="'tertiary'"
+        [disabled]="!canSubmit()"
+        (click)="onSubmit(true)"
+      >
+        <app-hub-icon [name]="'step-forward'" />
+
+        <p>Salvar e continuar</p>
+      </drx-button>
+
+      <drx-button
+        class="save-btn"
+        [type]="'button'"
+        [font]="'gothic'"
+        [size]="'medium'"
+        [variant]="'primary'"
+        [disabled]="!canSubmit()"
+        (click)="onSubmit(false)"
+      >
+        <app-hub-icon [name]="'save'" />
+
+        <p>{{ isEditing() ? 'Atualizar' : 'Salvar' }}</p>
+      </drx-button>
+    </div>
+  </footer>
+</section>

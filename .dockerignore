@@ -1,0 +1,10 @@
+node_modules
+dist
+.angular
+.git
+desktop
+android
+ios
+.env
+.env.*
+*.log
