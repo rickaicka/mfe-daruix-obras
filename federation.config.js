@@ -21,7 +21,7 @@ module.exports = withNativeFederation({
     },
   },
 
-  skip: ['rxjs/ajax', 'rxjs/fetch', 'rxjs/testing', 'rxjs/webSocket'],
+  skip: ['rxjs/ajax', 'rxjs/fetch', 'rxjs/testing', 'rxjs/webSocket', 'sweetalert2'],
 
   features: {
     ignoreUnusedDeps: true,
