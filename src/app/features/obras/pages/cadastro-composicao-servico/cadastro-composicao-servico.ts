@@ -8,6 +8,8 @@ import { ActivatedRoute, Router } from '@angular/router';
 import Swal from 'sweetalert2';
 import {
   ButtonComponent,
+  InputComponent,
+  DrxSelectComponent,
   CardSquareComponent,
   DrxAutocompleteComponent,
   type DrxAutocompleteSearch,
@@ -17,6 +19,7 @@ import {
   DrxEditableTreeCellDefDirective,
   DrxEditableNextOnEnterDirective,
   DrxEditableTableComponent,
+  DrxSidenavComponent,
   type DrxEditableTreeNode,
   type DrxEditableTableKey,
   type DrxEditableRowExpansion,
@@ -37,6 +40,8 @@ import {
   CompositionItemType,
   ServiceCompositionApiItem,
   ServiceCompositionAutocomplete,
+  ServiceCompositionGroup,
+  ServiceCompositionGroupNode,
 } from '../../models/service-composition.model';
 
 import { BrlCurrencyPipe } from '../../../../shared/pipes/brl-currency.pipe';
@@ -84,6 +89,8 @@ interface CompositionItem {
 
   imports: [
     ButtonComponent,
+    InputComponent,
+    DrxSelectComponent,
     CardSquareComponent,
     DrxAutocompleteComponent,
     DrxEditableCommitOnEnterDirective,
@@ -92,6 +99,7 @@ interface CompositionItem {
     DrxEditableTreeCellDefDirective,
     DrxEditableNextOnEnterDirective,
     DrxEditableTableComponent,
+    DrxSidenavComponent,
     HubIconComponent,
     BrlCurrencyPipe,
   ],
@@ -109,6 +117,182 @@ export class CadastroComposicaoServico {
   private readonly router = inject(Router);
 
   private readonly activatedRoute = inject(ActivatedRoute);
+
+  readonly compositionGroups = signal<ServiceCompositionGroup[]>([]);
+  readonly compositionGroupTree = signal<ServiceCompositionGroupNode[]>([]);
+  readonly selectedGroupId = signal<number | null>(null);
+  readonly groupsLoading = signal(false);
+  readonly groupsBusy = signal(false);
+  readonly expandedGroupIds = signal<ReadonlySet<number>>(new Set());
+
+  readonly compositionGroupRows = computed(() => {
+    const rows: { node: ServiceCompositionGroupNode; depth: number }[] = [];
+    const visit = (nodes: ServiceCompositionGroupNode[], depth: number) => {
+      for (const node of nodes) {
+        rows.push({ node, depth });
+        if (this.expandedGroupIds().has(node.id)) visit(node.children, depth + 1);
+      }
+    };
+    visit(this.compositionGroupTree(), 0);
+    return rows;
+  });
+
+  readonly groupPanelOpen = signal(false);
+  readonly groupEditorOpen = signal(false);
+  readonly editingGroupId = signal<number | null>(null);
+  readonly groupFormCode = signal('');
+  readonly groupFormName = signal('');
+  readonly groupFormParentId = signal<number | null>(null);
+  readonly groupSelectOptions = computed(() => this.compositionGroups().map(group => ({
+    value: String(group.id), label: `${group.code} — ${group.name}`,
+  })));
+  readonly groupParentOptions = computed(() => {
+    const forbidden = new Set<number>();
+    const gather = (nodes: ServiceCompositionGroupNode[], blocked = false) => {
+      for (const node of nodes) {
+        const nowBlocked = blocked || node.id === this.editingGroupId();
+        if (nowBlocked) forbidden.add(node.id);
+        gather(node.children, nowBlocked);
+      }
+    };
+    gather(this.compositionGroupTree());
+    return this.compositionGroups().filter(item => !forbidden.has(item.id)).map(group => ({
+      value: String(group.id), label: `${group.code} — ${group.name}`,
+    }));
+  });
+
+  readonly selectedGroupLabel = computed(() => {
+    const group = this.compositionGroups().find((item) => item.id === this.selectedGroupId());
+    return group ? `${group.code} — ${group.name}` : 'Sem grupo';
+  });
+
+  toggleGroup(id: number): void {
+    this.expandedGroupIds.update((previous) => {
+      const next = new Set(previous);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  private refreshCompositionGroups(): void {
+    this.groupsLoading.set(true);
+    this.obrasService.getCompositionGroupTree()
+      .pipe(finalize(() => this.groupsLoading.set(false)), takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (tree) => {
+          this.compositionGroupTree.set(tree);
+          const flat: ServiceCompositionGroup[] = [];
+          const walk = (nodes: ServiceCompositionGroupNode[]) => {
+            for (const node of nodes) {
+              flat.push({ ...node, is_active: true });
+              walk(node.children);
+            }
+          };
+          walk(tree);
+          this.compositionGroups.set(flat);
+          // Expandir os nós de primeiro nível ao carregar pela primeira vez.
+          if (this.expandedGroupIds().size === 0) {
+            this.expandedGroupIds.set(new Set(tree.map((item) => item.id)));
+          }
+        },
+        error: () => void Swal.fire('Erro', 'Não foi possível carregar os grupos de composição.', 'error'),
+      });
+  }
+
+  async changeCompositionGroup(group: number | null): Promise<void> {
+    if (this.groupsBusy()) return;
+    const previous = this.selectedGroupId();
+    if (previous === group) return;
+    const composition = this.selectedSupply();
+    if (!composition || this.isCreatingNewComposition()) {
+      this.selectedGroupId.set(group);
+      return;
+    }
+    this.groupsBusy.set(true);
+    try {
+      const updated = await firstValueFrom(this.obrasService.classifyComposition(composition.id, group));
+      if (this.destroyRef.destroyed) return;
+      this.selectedSupply.set(updated);
+      this.selectedGroupId.set(updated.group ?? null);
+    } catch (error) {
+      if (!this.destroyRef.destroyed) {
+        this.selectedGroupId.set(previous);
+        await Swal.fire('Erro ao classificar', this.describeGroupError(error), 'error');
+      }
+    } finally {
+      this.groupsBusy.set(false);
+    }
+  }
+
+  private describeGroupError(error: unknown): string {
+    if (error instanceof HttpErrorResponse) return this.getApiErrorMessage(error);
+    return 'Não foi possível concluir a operação.';
+  }
+
+  openGroupPanel(): void {
+    this.groupPanelOpen.set(true);
+  }
+
+  closeGroupPanel(): void {
+    if (this.groupsBusy()) return;
+    this.closeGroupEditor();
+    this.groupPanelOpen.set(false);
+  }
+
+  manageCompositionGroup(group?: ServiceCompositionGroupNode, parent?: number | null): void {
+    if (this.groupsBusy()) return;
+    this.groupPanelOpen.set(true);
+    this.editingGroupId.set(group?.id ?? null);
+    this.groupFormCode.set(group?.code ?? '');
+    this.groupFormName.set(group?.name ?? '');
+    this.groupFormParentId.set(group?.parent ?? parent ?? null);
+    this.groupEditorOpen.set(true);
+  }
+
+  closeGroupEditor(): void {
+    this.groupEditorOpen.set(false);
+    this.editingGroupId.set(null);
+  }
+
+  async saveCompositionGroup(): Promise<void> {
+    if (this.groupsBusy()) return;
+    const code = this.groupFormCode().trim();
+    const name = this.groupFormName().trim();
+    if (!code || !name) return;
+    const payload = { code, name, parent: this.groupFormParentId() };
+    this.groupsBusy.set(true);
+    try {
+      const id = this.editingGroupId();
+      if (id !== null) await firstValueFrom(this.obrasService.updateCompositionGroup(id, payload));
+      else await firstValueFrom(this.obrasService.createCompositionGroup(payload));
+      if (this.destroyRef.destroyed) return;
+      this.closeGroupEditor();
+      this.refreshCompositionGroups();
+    } catch (error) {
+      if (!this.destroyRef.destroyed)
+        await Swal.fire('Erro ao salvar grupo', this.describeGroupError(error), 'error');
+    } finally {
+      this.groupsBusy.set(false);
+    }
+  }
+
+  async deactivateGroup(group: ServiceCompositionGroupNode): Promise<void> {
+    const answer = await Swal.fire({
+      title: `Desativar grupo ${group.code}?`,
+      text: 'Grupos com subgrupos ou composições ativas precisam ser esvaziados antes.',
+      icon: 'warning', showCancelButton: true, confirmButtonText: 'Desativar', cancelButtonText: 'Cancelar',
+    });
+    if (!answer.isConfirmed || this.groupsBusy()) return;
+    this.groupsBusy.set(true);
+    try {
+      await firstValueFrom(this.obrasService.deactivateCompositionGroup(group.id));
+      if (this.selectedGroupId() === group.id) this.selectedGroupId.set(null);
+      this.refreshCompositionGroups();
+    } catch (error) {
+      await Swal.fire('Não foi possível desativar', this.describeGroupError(error), 'error');
+    } finally { this.groupsBusy.set(false); }
+  }
 
   readonly saving = signal(false);
 
@@ -851,6 +1035,7 @@ export class CadastroComposicaoServico {
     );
 
   constructor() {
+    this.refreshCompositionGroups();
     const compositionId = Number(this.activatedRoute.snapshot.queryParamMap.get('compositionId'));
 
     if (Number.isInteger(compositionId) && compositionId > 0) {
@@ -969,6 +1154,7 @@ export class CadastroComposicaoServico {
     }
 
     this.selectedSupply.set(composition);
+    this.selectedGroupId.set(composition.group ?? null);
 
     this.insumoForm().reset({
       id: composition.id.toString(),
@@ -1161,6 +1347,7 @@ export class CadastroComposicaoServico {
       code: composition.code,
       name: composition.name,
       is_active: true,
+      group: this.selectedGroupId(),
       unit: composition.latest_version?.unit ?? '',
       items: this.compositionItems().map((item, position) => ({
         item_type: item.itemType,
@@ -1227,6 +1414,7 @@ export class CadastroComposicaoServico {
           }).then(() => {
             if (continueAfterSave) {
               this.selectedSupply.set(savedComposition);
+              this.selectedGroupId.set(savedComposition.group ?? null);
               this.compositionActionMode.set('EDIT_EXISTING');
               this.insumoForm().reset({ id: savedComposition.id.toString() });
               this.loadCompositionItemsFromApi(savedComposition.latest_version?.items ?? []);
@@ -1268,6 +1456,7 @@ export class CadastroComposicaoServico {
       .subscribe({
         next: (composition) => {
           this.selectedSupply.set(composition);
+          this.selectedGroupId.set(composition.group ?? null);
           this.compositionActionMode.set('EDIT_EXISTING');
           this.insumoForm().reset({ id: composition.id.toString() });
           this.loadCompositionItemsFromApi(composition.latest_version?.items ?? []);
@@ -1313,6 +1502,7 @@ export class CadastroComposicaoServico {
     this.expandedCompositionKeys.set([]);
     this.compositionDetailsCache.set(new Map());
     this.selectedSupply.set(null);
+    this.selectedGroupId.set(null);
 
     this.compositionActionMode.set(null);
 

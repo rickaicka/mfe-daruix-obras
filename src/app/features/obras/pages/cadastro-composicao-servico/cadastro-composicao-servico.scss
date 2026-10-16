@@ -861,3 +861,42 @@
   font-size: 11px;
 }
 .composition-tree-readonly { font-size: 11px; color: var(--ex-gray-scale-700, #4e4b66); }
+
+
+/* Layout somente: campos e ações são componentes oficiais do DS. */
+.composition-group-field {
+  width: 100%; min-width: 0; display: flex; flex-direction: column; gap: 12px;
+  &__label { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  drx-select, drx-input { display: block; width: 100%; }
+}
+.composition-group-browser {
+  width: 100%; padding: 12px; box-sizing: border-box;
+  border: 1px solid var(--ex-gray-scale-400, #d6d8e7); border-radius: 8px;
+  &__toolbar { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+  &__row { display: flex; align-items: center; gap: 6px; min-height: 42px;
+    border-bottom: 1px solid var(--ex-gray-scale-300, #eee); }
+  &__name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  &__empty { margin: 12px 0; }
+}
+.composition-group-editor {
+  display: flex; flex-direction: column; gap: 12px; padding: 16px;
+  border: 1px solid var(--ex-gray-scale-400, #d6d8e7); border-radius: 8px;
+  &__actions { display: flex; justify-content: flex-end; gap: 12px; }
+}
+
+/* Painel de grupos: mesmo padrao de drx-sidenav utilizado pelo BDI/D.I. */
+.composition-group-panel {
+  display: flex; flex-direction: column; gap: 20px;
+  padding: 12px 4px 20px;
+  &__heading { display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+  &__heading p { flex: 1; min-width: 220px; margin: 0; }
+  &__footer { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 12px; }
+}
+.composition-group-browser { max-height: min(54vh, 580px); overflow: auto; }
+.composition-group-browser__row { min-width: 0; flex-wrap: wrap; padding-top: 4px; padding-bottom: 4px; }
+.composition-group-field { align-items: flex-start; }
+.composition-group-field drx-select { align-self: stretch; }
+@media (max-width: 720px) {
+  .composition-group-browser__row { padding-left: 8px !important; }
+  .composition-group-panel__heading { align-items: stretch; flex-direction: column; }
+}

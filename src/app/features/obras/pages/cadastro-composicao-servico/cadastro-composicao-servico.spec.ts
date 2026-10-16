@@ -64,4 +64,16 @@ describe('CadastroComposicaoServico', () => {
     expect(row.total).toBe(70);
     expect(component.itemToDraft(row).equipmentUnitPrice).toBe(5);
   });
+  it('should flatten nested composition groups when the parent is expanded', () => {
+    component.compositionGroupTree.set([{ id: 1, code: '03', name: 'Concreto', parent: null, children: [
+      { id: 2, code: '03.10', name: 'Formas', parent: 1, children: [] },
+    ] }]);
+    component.expandedGroupIds.set(new Set([1]));
+    expect(component.compositionGroupRows().map((row) => row.node.code)).toEqual(['03', '03.10']);
+    component.toggleGroup(1);
+    expect(component.compositionGroupRows().map((row) => row.node.code)).toEqual(['03']);
+  });
+
 });
+
+// A árvore TCPO não afeta os cálculos nem a expansão de subcomposições.

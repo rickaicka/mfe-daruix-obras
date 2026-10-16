@@ -20,7 +20,7 @@
     "@angular/platform-browser": "21.2.20",
     "@angular/router": "21.2.20",
     "@daruix/hub-auth": "0.0.17",
-    "@daruix/hub-ui": "0.2.98",
+    "@daruix/hub-ui": "0.2.100",
     "@ionic/angular": "^8.8.14",
     "@lucide/angular": "^1.25.0",
     "@softarc/native-federation-node": "^3.3.4",

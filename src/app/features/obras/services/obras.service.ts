@@ -9,6 +9,9 @@ import { GrupoMaterial, TipoInsumo, UnidadeMedida } from '../models/insumo.model
 import {
   CompositionItemType,
   ServiceCompositionAutocomplete,
+  ServiceCompositionGroup,
+  ServiceCompositionGroupNode,
+  ServiceCompositionGroupWritePayload,
 } from '../models/service-composition.model';
 
 export type CompositionItemCatalogOption =
@@ -42,6 +45,7 @@ export interface ServiceCompositionWritePayload {
   code: string;
   name: string;
   is_active: boolean;
+  group?: number | null;
   unit: string;
   items: ServiceCompositionWriteItem[];
 }
@@ -185,6 +189,40 @@ export class ObrasService {
     return this.httpClient.patch<ServiceCompositionAutocomplete>(
       `${environment.apiUrl}/budgeting/service-compositions/${compositionId}/`,
       payload,
+    );
+  }
+
+  listCompositionGroups(): Observable<ServiceCompositionGroup[]> {
+    return this.httpClient.get<ServiceCompositionGroup[]>(
+      `${environment.apiUrl}/budgeting/composition-groups/`,
+    );
+  }
+
+  getCompositionGroupTree(): Observable<ServiceCompositionGroupNode[]> {
+    return this.httpClient.get<ServiceCompositionGroupNode[]>(
+      `${environment.apiUrl}/budgeting/composition-groups/tree/`,
+    );
+  }
+
+  createCompositionGroup(payload: ServiceCompositionGroupWritePayload): Observable<ServiceCompositionGroup> {
+    return this.httpClient.post<ServiceCompositionGroup>(
+      `${environment.apiUrl}/budgeting/composition-groups/`, payload,
+    );
+  }
+
+  updateCompositionGroup(id: number, payload: Partial<ServiceCompositionGroupWritePayload>): Observable<ServiceCompositionGroup> {
+    return this.httpClient.patch<ServiceCompositionGroup>(
+      `${environment.apiUrl}/budgeting/composition-groups/${id}/`, payload,
+    );
+  }
+
+  deactivateCompositionGroup(id: number): Observable<void> {
+    return this.httpClient.delete<void>(`${environment.apiUrl}/budgeting/composition-groups/${id}/`);
+  }
+
+  classifyComposition(id: number, group: number | null): Observable<ServiceCompositionAutocomplete> {
+    return this.httpClient.patch<ServiceCompositionAutocomplete>(
+      `${environment.apiUrl}/budgeting/service-compositions/${id}/classify/`, { group },
     );
   }
 

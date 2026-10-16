@@ -36,26 +36,20 @@
         (selected)="onSupplySelected($event)"
         (cleared)="onSupplyCleared()"
       />
+      <drx-input label="Unidade de Medida" [value]="selectedUnitMeasureAbbreviation()" [readonly]="true" />
 
-      <div class="composicao-servico-card__field-wrapper__field">
-        <div class="wrapper-label">
-          <label for="unit_measure" class="drx-button--font-gothic bolder-font">
-            Unidade de Medida
-          </label>
-        </div>
-
-        <div
-          class="composicao-servico-card__field-wrapper__field__input-container"
-        >
-          <input
-            id="unit_measure"
-            class="drx-button--font-quicksand"
-            autocomplete="off"
-            readonly
-            [value]="selectedUnitMeasureAbbreviation()"
-          />
-        </div>
+      <div class="composition-group-field">
+        <drx-select label="Grupo de composição" placeholder="Sem grupo"
+          hint="Classificação independente dos custos e das revisões da composição."
+          [options]="groupSelectOptions()" [value]="selectedGroupId()?.toString() ?? ''"
+          [disabled]="groupsBusy() || groupsLoading()"
+          (selectionChange)="changeCompositionGroup($event ? +$event : null)" />
+        <drx-button type="button" font="gothic" size="medium" variant="tertiary"
+          [disabled]="groupsBusy()" (click)="openGroupPanel()">
+          <app-hub-icon name="folder-tree" /> Gerenciar grupos de composição
+        </drx-button>
       </div>
+
     </drx-card-square>
 
     @if (canShowCompositionItems()) {
@@ -399,3 +393,87 @@
     </div>
   </footer>
 </section>
+
+
+<drx-sidenav
+  [open]="groupPanelOpen()"
+  title="Índice de grupos de composição"
+  subtitle="Classificação hierárquica de serviços · padrão TCPO"
+  width="min(860px, 96vw)"
+  [closeOnBackdrop]="!groupsBusy()"
+  [closeOnEscape]="!groupsBusy()"
+  (close)="closeGroupPanel()"
+>
+  <div class="composition-group-panel">
+    <header class="composition-group-panel__heading">
+      <p class="drx-font-quicksand-body-sm">Organize grupos e subgrupos sem alterar os custos ou as revisões das composições.</p>
+      <drx-button type="button" font="gothic" size="medium" variant="primary"
+        [disabled]="groupsBusy()" (click)="manageCompositionGroup()">
+        <app-hub-icon name="circle-plus" /> Novo grupo raiz
+      </drx-button>
+    </header>
+
+    <section class="composition-group-browser" aria-label="Índice de grupos de composição">
+      @if (groupsLoading()) {
+        <p class="composition-group-browser__empty">Carregando grupos...</p>
+      } @else {
+        @for (row of compositionGroupRows(); track row.node.id) {
+          <div class="composition-group-browser__row" [style.padding-left.px]="row.depth * 18 + 8">
+            @if (row.node.children.length) {
+              <drx-button type="button" font="gothic" size="small" variant="tertiary"
+                (click)="toggleGroup(row.node.id)">
+                <app-hub-icon [name]="expandedGroupIds().has(row.node.id) ? 'chevron-down' : 'chevron-right'" />
+              </drx-button>
+            } @else { <app-hub-icon name="file-text" /> }
+            <div class="composition-group-browser__name">
+              <drx-button type="button" font="gothic" size="small" variant="tertiary"
+                [disabled]="groupsBusy()" (click)="changeCompositionGroup(row.node.id)">
+                {{ row.node.code }} — {{ row.node.name }}
+              </drx-button>
+            </div>
+            <drx-button type="button" font="gothic" size="small" variant="tertiary"
+              [disabled]="groupsBusy()" (click)="manageCompositionGroup(undefined, row.node.id)">
+              <app-hub-icon name="plus" /> Subgrupo
+            </drx-button>
+            <drx-button type="button" font="gothic" size="small" variant="tertiary"
+              [disabled]="groupsBusy()" (click)="manageCompositionGroup(row.node)">
+              <app-hub-icon name="pencil" /> Editar
+            </drx-button>
+            <drx-button type="button" font="gothic" size="small" variant="tertiary"
+              [disabled]="groupsBusy()" (click)="deactivateGroup(row.node)">
+              <app-hub-icon name="circle-slash" /> Desativar
+            </drx-button>
+          </div>
+        } @empty {
+          <p class="composition-group-browser__empty drx-font-quicksand-body-md">Nenhum grupo cadastrado.</p>
+        }
+      }
+    </section>
+
+    @if (groupEditorOpen()) {
+      <section class="composition-group-editor" aria-label="Dados do grupo de composição">
+        <h3 class="drx-font-gothic-body-md bolder-font">{{ editingGroupId() === null ? 'Novo grupo' : 'Editar grupo' }}</h3>
+        <drx-input label="Código" placeholder="Ex.: 03.10" [maxLength]="80"
+          [value]="groupFormCode()" (valueChange)="groupFormCode.set($event)" />
+        <drx-input label="Nome do grupo" placeholder="Ex.: Formas e escoramentos" [maxLength]="255"
+          [value]="groupFormName()" (valueChange)="groupFormName.set($event)" />
+        <drx-select label="Grupo pai" placeholder="Raiz" [options]="groupParentOptions()"
+          [value]="groupFormParentId()?.toString() ?? ''"
+          (selectionChange)="groupFormParentId.set($event ? +$event : null)" />
+      </section>
+    }
+  </div>
+  <div drxSidenavFooter class="composition-group-panel__footer">
+    <drx-button type="button" font="gothic" variant="secondary" [disabled]="groupsBusy()"
+      (click)="groupEditorOpen() ? closeGroupEditor() : closeGroupPanel()">
+      <app-hub-icon name="circle-slash" /> {{ groupEditorOpen() ? 'Cancelar edição' : 'Fechar' }}
+    </drx-button>
+    @if (groupEditorOpen()) {
+      <drx-button type="button" font="gothic" variant="primary"
+        [disabled]="groupsBusy() || !groupFormCode().trim() || !groupFormName().trim()"
+        (click)="saveCompositionGroup()">
+        <app-hub-icon name="check" /> {{ groupsBusy() ? 'Salvando...' : 'Salvar grupo' }}
+      </drx-button>
+    }
+  </div>
+</drx-sidenav>

@@ -34,10 +34,38 @@ export interface ServiceCompositionApiVersion {
   items: ServiceCompositionApiItem[];
 }
 
+export interface ServiceCompositionGroup {
+  id: number;
+  code: string;
+  name: string;
+  parent: number | null;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface ServiceCompositionGroupNode {
+  id: number;
+  code: string;
+  name: string;
+  parent: number | null;
+  children: ServiceCompositionGroupNode[];
+}
+
+export interface ServiceCompositionGroupWritePayload {
+  code: string;
+  name: string;
+  parent: number | null;
+  is_active?: boolean;
+}
+
 export interface ServiceCompositionAutocomplete {
   id: number;
   origin: DataOrigin;
   legacy_id: number | null;
+  group?: number | null;
+  group_code?: string | null;
+  group_name?: string | null;
   code: string;
   name: string;
   is_active: boolean;
