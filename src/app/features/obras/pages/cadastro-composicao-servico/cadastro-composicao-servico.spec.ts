@@ -1,14 +1,25 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-
+import { provideRouter } from '@angular/router';
+import { HubSessionService } from '@daruix/hub-auth';
+import { of } from 'rxjs';
+import { vi } from 'vitest';
+import { ObrasService } from '../../services/obras.service';
 import { CadastroComposicaoServico } from './cadastro-composicao-servico';
 
 describe('CadastroComposicaoServico', () => {
   let component: CadastroComposicaoServico;
   let fixture: ComponentFixture<CadastroComposicaoServico>;
+  const getCompositionGroupTree = vi.fn(() => of([]));
 
   beforeEach(async () => {
+    getCompositionGroupTree.mockClear();
     await TestBed.configureTestingModule({
       imports: [CadastroComposicaoServico],
+      providers: [
+        provideRouter([]),
+        { provide: ObrasService, useValue: { getCompositionGroupTree } },
+        { provide: HubSessionService, useValue: { userPermissions: () => [] } },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(CadastroComposicaoServico);
@@ -18,6 +29,8 @@ describe('CadastroComposicaoServico', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+    expect(getCompositionGroupTree).toHaveBeenCalledTimes(1);
+    expect(component.groupsLoading()).toBe(false);
   });
 
   it('should preserve separate costs and calculate the line without doubling the unit total', () => {
@@ -65,15 +78,20 @@ describe('CadastroComposicaoServico', () => {
     expect(component.itemToDraft(row).equipmentUnitPrice).toBe(5);
   });
   it('should flatten nested composition groups when the parent is expanded', () => {
-    component.compositionGroupTree.set([{ id: 1, code: '03', name: 'Concreto', parent: null, children: [
-      { id: 2, code: '03.10', name: 'Formas', parent: 1, children: [] },
-    ] }]);
+    component.compositionGroupTree.set([
+      {
+        id: 1,
+        code: '03',
+        name: 'Concreto',
+        parent: null,
+        children: [{ id: 2, code: '03.10', name: 'Formas', parent: 1, children: [] }],
+      },
+    ]);
     component.expandedGroupIds.set(new Set([1]));
     expect(component.compositionGroupRows().map((row) => row.node.code)).toEqual(['03', '03.10']);
     component.toggleGroup(1);
     expect(component.compositionGroupRows().map((row) => row.node.code)).toEqual(['03']);
   });
-
 });
 
 // A árvore TCPO não afeta os cálculos nem a expansão de subcomposições.

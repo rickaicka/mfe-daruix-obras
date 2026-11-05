@@ -43,7 +43,14 @@
           }
         },
         "test": {
-          "builder": "@angular/build:unit-test"
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "buildTarget": "mfe-daruix-obras:esbuild:development",
+            "tsConfig": "tsconfig.spec.json",
+            "runner": "vitest",
+            "coverage": false,
+            "exclude": ["**/rm-etapas-backup-*/**", "**/rm-modulo-backup-*/**"]
+          }
         },
         "esbuild": {
           "builder": "@angular/build:application",
@@ -57,12 +64,8 @@
                 "input": "public"
               }
             ],
-            "styles": [
-              "src/styles.scss"
-            ],
-            "polyfills": [
-              "es-module-shims"
-            ]
+            "styles": ["src/styles.scss"],
+            "polyfills": ["es-module-shims"]
           },
           "configurations": {
             "production": {

@@ -1,4 +1,4 @@
-const apiHost = window.location.hostname;
+const apiHost = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
 
 export const environment = {
   production: false,
