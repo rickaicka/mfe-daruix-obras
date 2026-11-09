@@ -11,6 +11,9 @@ export const OBRAS_ROUTES: Routes = [
   {
     path: 'composicao-servicos',
     canActivate: [hubPermissionGuard],
+    data: {
+      permission: 'supplies.view',
+    },
     loadComponent: () =>
       import('../features/obras/pages/cadastro-composicao-servico/cadastro-composicao-servico').then(
         (m) => m.CadastroComposicaoServico,
