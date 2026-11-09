@@ -394,17 +394,6 @@
     box-shadow 0.2s ease-in-out;
 }
 
-.table-composicao-wrapper {
-  width: 100%;
-  min-width: 0;
-  overflow-x: auto;
-
-  drx-editable-table {
-    display: block;
-    min-width: 1200px;
-  }
-}
-
 .composition-cost-hint {
   margin: 0 0 12px;
   line-height: 1.5;
@@ -821,13 +810,9 @@
         max-width: 100%;
         min-width: 0;
         box-sizing: border-box;
-        overflow-x: auto;
-        overflow-y: visible;
-
-        drx-editable-table {
-          display: block;
-          width: 100%;
-          min-width: 1180px;
+        // O scroll horizontal pertence ao contêiner interno da tabela do DS.
+        .drx-editable-table {
+          box-sizing: border-box;
         }
       }
     }
@@ -840,10 +825,6 @@
       .composicao-servico-dashboard__container__feature {
         .card__content {
           gap: 10px;
-        }
-
-        .table-composicao-wrapper drx-editable-table {
-          min-width: 1080px;
         }
       }
     }
