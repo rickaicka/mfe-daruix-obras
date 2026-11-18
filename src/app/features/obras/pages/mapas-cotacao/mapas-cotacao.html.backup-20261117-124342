@@ -1,0 +1,223 @@
+<section class="quotation">
+  @if (error()) {
+    <p class="error" role="alert">{{ error() }}</p>
+  }
+
+  @if (map(); as detail) {
+    <drx-card-square [nome]="detail.code">
+<!--      <drx-button card-header-action variant="secondary" [disabled]="busy()" (click)="navigate(null)">-->
+<!--        Voltar à lista-->
+<!--      </drx-button>-->
+      <div class="map-summary">
+        <div><span>Requisição de materiais</span><strong>{{ detail.rm }}</strong></div>
+        <div><span>Obra</span><strong>{{ detail.work }}</strong></div>
+        <div><span>Status</span><drx-badge [label]="status[detail.status]" [tone]="statusTones[detail.status]" /></div>
+      </div>
+    </drx-card-square>
+
+    <fieldset [disabled]="busy() || !writable()">
+      @if (writable()) {
+        <drx-card-square nome="Fornecedores">
+          <drx-badge card-header-action [label]="detail.quotes.length + ' de 6 fornecedores'" />
+          <form class="supplier-search" (ngSubmit)="searchSuppliers()">
+            <drx-input label="Buscar fornecedor" placeholder="Nome, documento ou contato" type="search"
+              [value]="supplierTerm()" (valueChange)="supplierTerm.set($event)"
+              [disabled]="busy() || detail.quotes.length >= 6" />
+            <drx-button type="submit" [disabled]="busy() || detail.quotes.length >= 6" [font]="'gothic'">Buscar</drx-button>
+          </form>
+          @if (supplierCount() > matches().length) {
+            <p>Refine a busca para encontrar outros fornecedores.</p>
+          }
+          @if (matches().length) {
+            <ul class="suppliers">
+              @for (supplier of matches(); track supplier.id) {
+                <li>
+                  <drx-button variant="secondary" size="small" [disabled]="busy() || detail.quotes.length >= 6" (click)="addSupplier(supplier)">
+                    Adicionar {{ supplier.name }} {{ supplier.document }}
+                  </drx-button>
+                </li>
+              }
+            </ul>
+          }
+        </drx-card-square>
+      }
+
+      <drx-card-square nome="Comparativo de fornecedores">
+        <div class="table-scroll" tabindex="0" aria-label="Comparativo de fornecedores">
+          <table [class.comparison--with-quotes]="detail.quotes.length > 0">
+            <thead>
+              <tr>
+                <th scope="col" class="item-heading">Item da RM</th>
+                @for (quote of detail.quotes; track quote.supplier.id; let supplierIndex = $index) {
+                  <th scope="col" class="supplier-heading">
+                    {{ quote.supplier.name }}
+                    @if (writable()) {
+                      <drx-button variant="tertiary" size="small" [disabled]="busy()" (click)="detail.quotes.splice(supplierIndex, 1); dirty.set(true)">Remover</drx-button>
+                    }
+                  </th>
+                }
+                @if (detail.quotes.length) { <th scope="col" class="price-cell">Menor preço unitário</th> }
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of comparisonRows(); track row.key) {
+                @if (row.kind === 'composition') {
+                  <tr class="composition-row">
+                    <td [attr.colspan]="detail.quotes.length ? detail.quotes.length + 2 : 1">
+                      <div class="composition-heading" [style.--composition-depth]="row.depth">
+                        @let expanded = expandedCompositions().has(row.key);
+                        <button type="button" class="row-chevron"
+                          [attr.aria-expanded]="expanded"
+                          [attr.aria-label]="(expanded ? 'Recolher ' : 'Expandir ') + row.label"
+                          (click)="toggleComposition(row.key)">
+                          <app-hub-icon name="chevron-right" aria-hidden="true" />
+                        </button>
+                        <span>{{ row.label }}</span>
+                        @if (row.depth === 0) {
+                          <drx-badge label="Serviço composto" tone="info" />
+                        }
+                      </div>
+                    </td>
+                  </tr>
+                } @else {
+                  @let item = row.item;
+                  @let itemIndex = row.itemIndex;
+                  <tr>
+                    <th scope="row" class="item-cell" [style.--composition-depth]="row.depth">
+                      <small>{{ item.stage }}</small>
+                      <strong class="item-description" [attr.title]="item.description">{{ item.description }}</strong>
+                      <small>{{ formatQuantity(item.quantity) }} {{ item.unit }}
+                        @if (item.period) { · {{ item.period }} {{ item.period_unit }} }
+                      </small>
+                      @if (item.notes) { <small>{{ item.notes }}</small> }
+                    </th>
+                    @for (quote of detail.quotes; track quote.supplier.id) {
+                      @if (quote.offers[itemIndex]; as offer) {
+                        <td class="quote-cell" [class.quote-cell--selected]="offer.selected">
+                          <drx-input label="Unitário (R$)" inputMode="decimal" [value]="offer.unit_price ?? ''" (valueChange)="offer.unit_price = $event; dirty.set(true)" [disabled]="busy() || !writable()" />
+                          <drx-input label="Observação" [maxLength]="4000" [value]="offer.notes" (valueChange)="offer.notes = $event; dirty.set(true)" [disabled]="busy() || !writable()" />
+                          <small>Total {{ formatBrl(lineTotal(item, offer)) }}</small>
+                          @if (offer.selected) {
+                            <drx-badge label="Oferta selecionada" tone="success" />
+                          } @else if (writable()) {
+                            <drx-button variant="secondary" size="small" [disabled]="busy() || !offer.unit_price"
+                              (click)="choose(offer); dirty.set(true)">Selecionar oferta</drx-button>
+                          }
+                        </td>
+                      }
+                    }
+                    @if (detail.quotes.length) { <td class="price-cell">{{ formatBrl(lowest(itemIndex)) }}</td> }
+                  </tr>
+                }
+              }
+              @if (detail.quotes.length) {
+                <tr>
+                  <th scope="row">Condições comerciais</th>
+                  @for (quote of detail.quotes; track quote.supplier.id) {
+                    <td class="quote-cell">
+                      <drx-input label="Contato" [maxLength]="255" [value]="quote.supplier.contact" (valueChange)="quote.supplier.contact = $event; dirty.set(true)" [disabled]="busy() || !writable()" />
+                      <drx-input label="Telefone" [maxLength]="255" [value]="quote.supplier.phone" (valueChange)="quote.supplier.phone = $event; dirty.set(true)" [disabled]="busy() || !writable()" />
+                      <drx-input label="E-mail" type="email" [maxLength]="255" [value]="quote.supplier.email" (valueChange)="quote.supplier.email = $event; dirty.set(true)" [disabled]="busy() || !writable()" />
+                      <drx-input label="Pagamento" [maxLength]="255" [value]="quote.payment" (valueChange)="quote.payment = $event; dirty.set(true)" [disabled]="busy() || !writable()" />
+                      <drx-input label="Prazo de entrega" [maxLength]="255" [value]="quote.delivery" (valueChange)="quote.delivery = $event; dirty.set(true)" [disabled]="busy() || !writable()" />
+                      <drx-input label="Validade" [maxLength]="255" [value]="quote.validity" (valueChange)="quote.validity = $event; dirty.set(true)" [disabled]="busy() || !writable()" />
+                      <drx-calendar label="Data da proposta" [value]="quote.quoted_on ?? ''" (valueChange)="quote.quoted_on = $event || null; dirty.set(true)" [disabled]="busy() || !writable()" />
+                      <drx-input label="Frete (R$)" inputMode="decimal" [value]="quote.freight" (valueChange)="quote.freight = $event; dirty.set(true)" [disabled]="busy() || !writable()" />
+                      <drx-input label="Desconto (R$)" inputMode="decimal" [value]="quote.discount" (valueChange)="quote.discount = $event; dirty.set(true)" [disabled]="busy() || !writable()" />
+                      <drx-textarea label="Observações" [rows]="2" [maxLength]="4000" [value]="quote.notes" (valueChange)="quote.notes = $event; dirty.set(true)" [disabled]="busy() || !writable()" />
+                    </td>
+                  }
+                  <td></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </drx-card-square>
+      <drx-card-square nome="Observações">
+        <drx-textarea label="Observações do mapa" [rows]="2" [maxLength]="4000" [value]="detail.notes" (valueChange)="detail.notes = $event; dirty.set(true)" [disabled]="busy() || !writable()" />
+      </drx-card-square>
+    </fieldset>
+
+    @if (writable() && !detail.tender_opened_at) {
+      <drx-card-square nome="Leilão reverso">
+        <p>Os fornecedores selecionados receberão um convite pelo e-mail cadastrado. Confirme os endereços antes de publicar.</p>
+        <div class="tender-actions">
+          <drx-calendar label="Data limite para propostas" [value]="tenderDate()"
+            (valueChange)="tenderDate.set($event)" [disabled]="busy()" />
+          <drx-input label="Horário limite" placeholder="HH:mm" [maxLength]="5"
+            [value]="tenderTime()" (valueChange)="tenderTime.set($event)" [disabled]="busy()" />
+          <drx-button [font]="'gothic'" [disabled]="busy() || dirty() || !tenderDeadline()" (click)="mutate('publish-tender')">
+            Publicar leilão e convidar fornecedores
+          </drx-button>
+        </div>
+      </drx-card-square>
+    }
+    @if (tenderPending() && detail.status === 'DRAFT') {
+      <drx-card-square nome="Leilão reverso publicado">
+        <div class="tender-actions">
+          <p>Prazo das propostas {{ detail.tender_deadline | date:'dd/MM/yyyy HH:mm' }}</p>
+          <drx-button [font]="'gothic'" [disabled]="busy()" (click)="mutate('close-tender')">Encerrar e atualizar propostas</drx-button>
+        </div>
+      </drx-card-square>
+    }
+    @if (writable() || detail.status === 'FINAL') {
+      <footer class="map-actions">
+        @if (writable()) {
+          <drx-button [font]="'gothic'" [disabled]="busy()" (click)="mutate('save')">Salvar cotação</drx-button>
+          <drx-button [font]="'gothic'" variant="secondary" [disabled]="busy() || dirty() || detail.status !== 'DRAFT'"
+            (click)="mutate('finalize')">Finalizar mapa</drx-button>
+        }
+        @if (detail.status === 'FINAL') {
+          <drx-button [font]="'gothic'" [disabled]="busy()" (click)="mutate('generate-orders')">Gerar ordens de compra</drx-button>
+        }
+      </footer>
+    }
+
+    @if (detail.orders.length) {
+      <drx-card-square nome="Ordens de compra">
+        @for (order of detail.orders; track order.id) {
+          @let orderKey = 'order:' + order.id;
+          @let orderExpanded = expandedCompositions().has(orderKey);
+          <div class="order-row">
+            <div class="order-heading">
+              <button type="button" class="row-chevron"
+                [attr.aria-expanded]="orderExpanded"
+                [attr.aria-label]="(orderExpanded ? 'Recolher OC ' : 'Expandir OC ') + order.id"
+                (click)="toggleComposition(orderKey)">
+                <app-hub-icon name="chevron-right" aria-hidden="true" />
+              </button>
+              <span>OC {{ order.id }} · {{ order.supplier_snapshot.name }} · {{ formatBrl(order.total) }}</span>
+            </div>
+            @if (orderExpanded) {
+              <ul>
+                @for (item of order.lines; track item.id) {
+                  <li>{{ item.description }} · {{ formatQuantity(item.quantity) }} {{ item.unit }} · {{ formatBrl(item.total) }}</li>
+                }
+              </ul>
+            }
+          </div>
+        }
+      </drx-card-square>
+    }
+  } @else {
+    <drx-data-table
+      title="Mapas de Cotação"
+      [icon]="''"
+      mode="server"
+      [rows]="rows()"
+      [columns]="columns"
+      [actions]="actions"
+      [total]="total()"
+      [page]="query()?.page ?? 1"
+      [pageSize]="query()?.pageSize ?? 20"
+      [loading]="loading()"
+      [search]="query()?.search ?? ''"
+      [filters]="query()?.filters ?? {}"
+      [columnFilters]="true"
+      searchPlaceholder="Pesquisar por mapa, PC, RM ou obra"
+      (queryChange)="updateQuery($event)"
+      (rowAction)="rowAction($event)"
+    />
+  }
+</section>

@@ -1,0 +1,234 @@
+:host {
+  display: block;
+  min-inline-size: 0;
+  color: var(--drx-color-text-default, #3d4960);
+  font-family: var(--drx-font-family-base, 'Quicksand', sans-serif);
+  font-size: var(--drx-font-size-body-sm, 14px);
+  line-height: var(--drx-line-height-md, 1.5);
+}
+
+.quotation,
+fieldset {
+  display: grid;
+  gap: 16px;
+  min-inline-size: 0;
+}
+
+.quotation {
+  padding: 16px;
+}
+
+fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.map-summary,
+.supplier-search,
+.tender-actions,
+.map-actions,
+.suppliers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  align-items: end;
+}
+
+.map-summary {
+  align-items: start;
+}
+
+.map-summary > div {
+  display: grid;
+  gap: 4px;
+}
+
+.map-summary span,
+.item-cell small {
+  color: var(--drx-color-text-muted, #687386);
+  font-size: var(--drx-font-size-caption, 12px);
+}
+
+.supplier-search drx-input {
+  flex: 0 1 360px;
+  min-inline-size: 0;
+}
+
+.suppliers {
+  padding: 0;
+  list-style: none;
+}
+
+.table-scroll {
+  max-block-size: 65vh;
+  overflow: auto;
+  border: 1px solid var(--drx-color-border-subtle, #e6e8f0);
+  border-radius: 12px;
+}
+
+.table-scroll:focus-visible,
+
+table {
+  inline-size: 100%;
+  border-spacing: 0;
+  background: var(--drx-color-surface, #fff);
+}
+
+th,
+td {
+  padding: 12px 16px;
+  text-align: start;
+  vertical-align: top;
+  border-block-end: 1px solid var(--drx-color-border-subtle, #e6e8f0);
+}
+
+thead th {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+  color: var(--drx-color-text-muted, #687386);
+  background: var(--drx-color-surface-muted, #f5f6fa);
+  font-family: var(--drx-font-family-display, 'Science Gothic', sans-serif);
+}
+
+.comparison--with-quotes .item-cell,
+.comparison--with-quotes .item-heading {
+  inline-size: 28ch;
+  min-inline-size: 24ch;
+}
+
+.item-cell {
+  font-weight: inherit;
+  overflow-wrap: anywhere;
+}
+
+.item-cell > * {
+  display: block;
+}
+
+table:not(.comparison--with-quotes) {
+  table-layout: fixed;
+}
+
+.item-description {
+  max-inline-size: 100ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.comparison--with-quotes .item-description {
+  max-inline-size: 28ch;
+}
+
+
+.supplier-heading {
+  min-inline-size: 200px;
+}
+
+.supplier-heading drx-button {
+  display: block;
+  margin-block-start: 6px;
+}
+
+.quote-cell > * + * {
+  margin-block-start: 8px;
+}
+
+.quote-cell--selected {
+  background: var(--drx-color-success-bg, #e4f5eb);
+}
+
+.price-cell {
+  white-space: nowrap;
+}
+
+.map-actions {
+  justify-content: end;
+}
+
+.error {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--drx-color-danger-bg, #fdeaea);
+  color: var(--drx-color-danger-text, #a82222);
+}
+
+.composition-row td {
+  padding: 0;
+  background: var(--drx-color-surface-muted, #f5f6fa);
+}
+
+.item-cell {
+  padding-inline-start: calc(16px + var(--composition-depth, 0) * 20px);
+}
+
+.composition-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px 16px;
+  padding-inline-start: calc(16px + var(--composition-depth, 0) * 20px);
+}
+
+.order-row + .order-row {
+  border-block-start: 1px solid var(--drx-color-border-subtle, #e6e8f0);
+}
+
+.order-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-block: 6px;
+}
+
+.row-chevron {
+  display: grid;
+  place-items: center;
+  flex: 0 0 28px;
+  block-size: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--drx-color-primary, #c00d0e);
+  cursor: pointer;
+}
+
+.row-chevron:hover {
+  background: var(--drx-color-primary-soft, #fdeaea);
+}
+
+.row-chevron:focus-visible {
+  outline: 2px solid var(--drx-color-focus-ring, #c00d0e);
+  outline-offset: 2px;
+}
+
+.row-chevron app-hub-icon {
+  display: grid;
+  place-items: center;
+}
+
+.row-chevron[aria-expanded='true'] app-hub-icon {
+  transform: rotate(90deg);
+}
+
+.price-origin { display: block; font-size: .73rem; margin: .2rem 0 .4rem; opacity: .8; }
+.price-origin--tender { color: #16803c; }
+.price-origin--adjusted { color: #a26600; }
+
+.comparison-refresh { display: flex; align-items: center; gap: .75rem; margin-bottom: .5rem; }
+
+.publish-hint {
+  margin: 0;
+  color: var(--drx-color-warning-text, #805100);
+  font-weight: 600;
+}
+.publish-help {
+  margin: 0;
+  color: var(--drx-color-text-muted, #687386);
+  font-size: var(--drx-font-size-caption, 12px);
+}

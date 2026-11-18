@@ -1,0 +1,104 @@
+<main class="supplier-portal">
+  <header class="portal-header">
+    <div class="portal-brand" aria-label="Daruix Hub">
+      <span class="brand-mark">D.</span>
+      <span class="brand-word">DARUIX <small>Hub</small></span>
+      <span class="brand-divider"></span>
+      <span class="brand-area">Portal de fornecedores</span>
+    </div>
+    @if (invitationAccess()) {
+      <div class="session-profile">
+        <span class="session-avatar">{{ initials() }}</span>
+        <div class="session-info">
+          <strong>{{ supplierName() }}</strong>
+          <span>{{ sessionUsername() }} · Acesso temporário</span>
+        </div>
+        <drx-button variant="tertiary" size="small" (click)="logout()">Sair</drx-button>
+      </div>
+    } @else {
+      <span class="header-secure">Acesso exclusivo por convite</span>
+    }
+  </header>
+
+  @if (!invitationAccess()) {
+    <section class="login-layout">
+      <aside class="login-intro">
+        <span class="eyebrow">DARUIX HUB · COTAÇÕES</span>
+        <h1>Leilão<br><em>Reverso.</em></h1>
+        <p>Acesse os materiais solicitados, informe seus preços e envie sua proposta diretamente à equipe de Compras.</p>
+        <div class="intro-footnote">Seu convite é individual e válido por até 72 horas.</div>
+      </aside>
+      <section class="login-panel" aria-labelledby="login-title">
+        <div class="login-icon" aria-hidden="true">↗</div>
+        <h2 id="login-title">Acessar convite</h2>
+        <p class="login-description">Utilize as credenciais recebidas no e-mail cadastrado junto à Daruix.</p>
+        @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
+        @if (!invitationToken()) { <p class="warning" role="alert">Abra o link exclusivo recebido por e-mail para acessar seu leilão.</p> }
+        <form (ngSubmit)="loginInvitation()" class="login-form">
+          <drx-input label="Login temporário" autocomplete="username" [value]="invitationUsername()"
+                     (valueChange)="invitationUsername.set($event)" [disabled]="busy()" />
+          <drx-input label="Senha temporária" [type]="showPassword() ? 'text' : 'password'"
+                     [value]="invitationPassword()" (valueChange)="invitationPassword.set($event)"
+                     [disabled]="busy()" />
+          <label class="show-password"><input type="checkbox" [checked]="showPassword()" (change)="showPassword.set(!showPassword())" /> Mostrar senha</label>
+          <drx-button type="submit" [font]="'gothic'" [disabled]="busy() || !invitationUsername().trim() || !invitationPassword() || !invitationToken()">
+            {{ busy() ? 'Validando acesso...' : 'Entrar no leilão' }}
+          </drx-button>
+        </form>
+        <div class="login-help">Seu acesso é encerrado automaticamente ao vencer o convite. Solicite um novo convite à equipe de Compras se necessário.</div>
+      </section>
+    </section>
+  } @else {
+    <div class="portal-content">
+      <div class="content-heading">
+        <div><span class="eyebrow">ÁREA DO FORNECEDOR</span><h1>Leilão Reverso</h1><p>Consulte os itens e apresente sua melhor proposta.</p></div>
+        <div class="expiry"><span>Convite válido até</span><strong>{{ sessionExpiresAt() | date:'dd/MM/yyyy HH:mm' }}</strong><small>{{ supplierEmail() }}</small></div>
+      </div>
+      @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
+      @if (detail(); as tender) {
+        <drx-card-square [nome]="tender.code + ' · ' + tender.pc">
+          <div class="tender-summary">
+            <span>Referência <strong>{{ tender.reference_date | date:'dd/MM/yyyy' }}</strong></span>
+            @if (tender.delivery_date) { <span>Entrega solicitada <strong>{{ tender.delivery_date | date:'dd/MM/yyyy' }}</strong></span> }
+            <span>Propostas até <strong>{{ tender.deadline | date:'dd/MM/yyyy HH:mm' }}</strong></span>
+            <drx-button variant="secondary" size="small" [disabled]="busy()" (click)="back()">Voltar</drx-button>
+          </div>
+          @if (!tender.open) { <p class="warning">Prazo encerrado. A proposta não pode mais ser alterada.</p> }
+          @if (!tender.participating) { <p class="warning">Este fornecedor não possui participação ativa neste mapa. Solicite um novo convite à equipe de Compras.</p> }
+          @if (tender.own_offer) { <p class="success">Sua proposta foi recebida. Você pode atualizá-la enquanto o leilão estiver aberto.</p> }
+          @if (draft(); as bid) {
+            <fieldset [disabled]="!tender.open || !tender.participating">
+              <div class="table-scroll"><table><thead><tr><th>Material / serviço</th><th>Quantidade solicitada</th><th>Sua oferta</th></tr></thead>
+                <tbody>@for (item of tender.items; track item.id; let index = $index) {
+                  <tr><th scope="row">{{ item.description }}</th><td>{{ item.quantity }} {{ item.unit }} @if (item.period) { · {{ item.period }} {{ item.period_unit }} }</td>
+                    <td>@if (tender.participating) {
+                      <label>Preço unitário (R$) <input inputmode="decimal" [(ngModel)]="bid.offers[index].unit_price" /></label>
+                      <label>Observação <input [(ngModel)]="bid.offers[index].notes" maxlength="4000" /></label>
+                    }</td></tr>
+                }</tbody></table></div>
+              @if (tender.participating) {
+                <div class="terms-grid">
+                  <label>Pagamento <input [(ngModel)]="bid.payment" maxlength="255" /></label>
+                  <label>Prazo de entrega <input [(ngModel)]="bid.delivery" maxlength="255" /></label>
+                  <label>Data da proposta <input type="date" [(ngModel)]="bid.quoted_on" /></label>
+                  <label>Frete (R$) <input inputmode="decimal" [(ngModel)]="bid.freight" /></label>
+                  <label>Desconto (R$) <input inputmode="decimal" [(ngModel)]="bid.discount" /></label>
+                  <label class="terms-notes">Observações <textarea [(ngModel)]="bid.notes" maxlength="4000"></textarea></label>
+                </div>
+                <div class="form-actions"><drx-button [font]="'gothic'" [disabled]="busy()" (click)="send(tender.id, bid)">{{ tender.own_offer ? 'Atualizar minha proposta' : 'Enviar minha proposta' }}</drx-button></div>
+              }
+            </fieldset>
+          }
+        </drx-card-square>
+      } @else {
+        <drx-card-square nome="Meus convites">
+          <div class="table-scroll"><table><thead><tr><th>Mapa</th><th>PC</th><th>Prazo</th><th>Status</th><th>Ações</th></tr></thead>
+            <tbody>@for (tender of rows(); track tender.id) { <tr><td>{{ tender.code }}</td><td>{{ tender.pc }}</td><td>{{ tender.deadline | date:'dd/MM/yyyy HH:mm' }}</td><td>{{ tender.open ? 'Recebendo propostas' : 'Encerrada' }}</td><td><drx-button variant="secondary" size="small" [disabled]="busy()" (click)="open(tender.id)">Ver materiais</drx-button></td></tr>
+            } @empty { <tr><td colspan="5">Nenhum convite para cotação encontrado.</td></tr> }</tbody></table></div>
+          <div class="pager"><drx-button variant="secondary" size="small" [disabled]="busy() || page() <= 1" (click)="load(page() - 1)">Anterior</drx-button><drx-button variant="secondary" size="small" [disabled]="busy() || page() * 20 >= total()" (click)="load(page() + 1)">Próxima</drx-button></div>
+        </drx-card-square>
+      }
+    </div>
+  }
+  <footer class="portal-footer"><span>© Daruix Hub · Portal de fornecedores</span><span>Acesso protegido e individual</span></footer>
+</main>

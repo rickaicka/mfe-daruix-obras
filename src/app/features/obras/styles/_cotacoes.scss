@@ -1,0 +1,47 @@
+:host {
+  display: block;
+  min-inline-size: 0;
+  color: var(--drx-color-text-default, #3d4960);
+  font-family: var(--drx-font-family-base, 'Quicksand', sans-serif);
+  font-size: var(--drx-font-size-body-sm, 14px);
+  line-height: var(--drx-line-height-md, 1.5);
+}
+
+.quotation {
+  display: grid;
+  gap: 16px;
+  min-inline-size: 0;
+  padding: 16px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 16px;
+}
+
+.toolbar,
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  align-items: end;
+}
+
+.toolbar drx-input,
+.toolbar drx-select {
+  flex: 0 1 280px;
+  min-inline-size: 0;
+}
+
+.actions {
+  justify-content: end;
+}
+
+.error {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--drx-color-danger-bg, #fdeaea);
+  color: var(--drx-color-danger-text, #a82222);
+}
