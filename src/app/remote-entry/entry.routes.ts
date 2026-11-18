@@ -38,33 +38,4 @@ export const OBRAS_ROUTES: Routes = [
     loadComponent: () =>
       import('../features/obras/pages/leilao-reverso/leilao-reverso').then((m) => m.LeilaoReverso),
   },
-  {
-    path: 'fornecedores-cotacao/novo',
-    canActivate: [hubPermissionGuard],
-    data: { permission: 'quotation_map.manage' },
-    loadComponent: () =>
-      import('../features/obras/pages/fornecedores-cotacao/fornecedor-cotacao-editor').then(
-        (m) => m.FornecedorCotacaoEditor,
-      ),
-  },
-  {
-    path: 'fornecedores-cotacao/:id',
-    canActivate: [hubPermissionGuard],
-    data: { permission: 'quotation_map.manage' },
-    loadComponent: () =>
-      import('../features/obras/pages/fornecedores-cotacao/fornecedor-cotacao-editor').then(
-        (m) => m.FornecedorCotacaoEditor,
-      ),
-  },
-  {
-    path: 'fornecedores-cotacao',
-    canActivate: [hubPermissionGuard],
-    data: {
-      permission: 'quotation_map.manage',
-    },
-    loadComponent: () =>
-      import('../features/obras/pages/fornecedores-cotacao/fornecedores-cotacao').then(
-        (m) => m.FornecedoresCotacao,
-      ),
-  },
 ];
