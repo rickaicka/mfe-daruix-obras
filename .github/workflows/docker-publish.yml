@@ -128,9 +128,14 @@ jobs:
 
           echo 'Validando configuração Compose'
           "${compose[@]}" config --quiet
-          if ! "${compose[@]}" config --services | grep -Fxq 'obras'; then
-            echo 'Serviço obras ausente no Compose' >&2
-            exit 1
+          services="$("${compose[@]}" config --services)"
+
+          echo "Serviços disponíveis:"
+          printf '%s\n' "$services"
+
+          if ! grep -Fxq 'obras' <<< "$services"; then
+          echo 'Serviço obras ausente no Compose' >&2
+          exit 1
           fi
 
           echo 'Baixando imagem obras'
