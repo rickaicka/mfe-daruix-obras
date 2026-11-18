@@ -14,7 +14,7 @@ concurrency:
 
 env:
   REGISTRY: ghcr.io
-  mfe-daruix-obras_NAME: rickaicka/mfe-daruix-obras
+  OBRAS_IMAGE_NAME: rickaicka/mfe-daruix-obras
 
 jobs:
   build-and-push:
@@ -41,7 +41,7 @@ jobs:
         id: metadata
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.mfe-daruix-obras_NAME }}
+          images: ${{ env.REGISTRY }}/${{ env.OBRAS_IMAGE_NAME }}
           tags: |
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
             type=ref,event=tag
@@ -71,38 +71,85 @@ jobs:
         env:
           VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
           VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        shell: bash
         run: |
           set -euo pipefail
-          install -m 700 -d ~/.ssh
-          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
-          chmod 600 ~/.ssh/known_hosts
+          test -n "$VPS_SSH_KEY" || { echo 'VPS_SSH_KEY vazio' >&2; exit 1; }
+          test -n "$VPS_KNOWN_HOSTS" || { echo 'VPS_KNOWN_HOSTS vazio' >&2; exit 1; }
+          install -m 700 -d "$HOME/.ssh"
+          printf '%s\n' "$VPS_SSH_KEY" > "$HOME/.ssh/deploy_key"
+          chmod 600 "$HOME/.ssh/deploy_key"
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/known_hosts"
+          ssh-keygen -y -f "$HOME/.ssh/deploy_key" >/dev/null
+          echo 'Chave privada carregada e validada.'
 
-      - name: Atualizar obras na VPS
+      - name: Validar conexão SSH e acesso ao Docker
+        shell: bash
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}
           VPS_PORT: ${{ vars.VPS_PORT || '22' }}
         run: |
           set -euo pipefail
-          ssh -i ~/.ssh/deploy_key -p "$VPS_PORT" \
+          test -n "$VPS_HOST" && test -n "$VPS_USER"
+          echo 'Testando autenticação SSH e execução remota...'
+          ssh -vv \
+            -i "$HOME/.ssh/deploy_key" -p "$VPS_PORT" \
             -o IdentitiesOnly=yes \
-            -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            -o ConnectTimeout=20 \
+            -o ServerAliveInterval=15 \
+            -o ServerAliveCountMax=3 \
+            "$VPS_USER@$VPS_HOST" \
+            'echo SSH_OK; id -un; hostname; docker --version; docker compose version'
+
+      - name: Atualizar obras na VPS
+        shell: bash
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ vars.VPS_PORT || '22' }}
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/deploy_key" -p "$VPS_PORT" \
+            -o IdentitiesOnly=yes \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            -o ConnectTimeout=20 \
+            -o ServerAliveInterval=15 \
+            -o ServerAliveCountMax=3 \
             "$VPS_USER@$VPS_HOST" 'bash -se' <<'REMOTE'
           set -euo pipefail
+          echo 'REMOTE_OK: iniciando deploy obras'
           cd /opt/daruix-hub
           compose=(docker compose -f compose.yml -f compose.front.yml)
-          "${compose[@]}" config --services | grep -qx 'obras'
+
+          echo 'Validando configuração Compose'
+          "${compose[@]}" config --quiet
+          if ! "${compose[@]}" config --services | grep -Fxq 'obras'; then
+            echo 'Serviço obras ausente no Compose' >&2
+            exit 1
+          fi
+
+          echo 'Baixando imagem obras'
           "${compose[@]}" pull obras
+          echo 'Recriando serviço obras'
           "${compose[@]}" up -d --no-deps --force-recreate obras
+
           container_id="$("${compose[@]}" ps -q obras)"
-          test -n "$container_id"
+          if [ -z "$container_id" ]; then
+            echo 'Container obras não foi encontrado após o deploy' >&2
+            exit 1
+          fi
+          echo "Container encontrado: $container_id"
           for attempt in $(seq 1 45); do
             status="$(docker inspect -f '{{.State.Status}}' "$container_id")"
             health="$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$container_id")"
+            echo "Verificação $attempt/45: status=$status health=$health"
             if [ "$status" = running ] && [ "$health" = healthy ]; then
-              echo 'Deploy obras concluido: container saudavel.'
+              echo 'Deploy obras concluído: container saudável.'
               exit 0
             fi
             if [ "$status" = exited ] || [ "$status" = dead ]; then
