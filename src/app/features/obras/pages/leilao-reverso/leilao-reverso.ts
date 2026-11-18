@@ -3,7 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { ButtonComponent, InputComponent, CardSquareComponent } from '@daruix/hub-ui';
+import { ButtonComponent, InputComponent } from '@daruix/hub-ui';
 import { ActivatedRoute } from '@angular/router';
 import { Observable } from 'rxjs';
 import { CotacoesService } from '../../services/cotacoes.service';
@@ -11,7 +11,7 @@ import type { TenderBid, TenderDetail, TenderRow } from '../../models/leilao-rev
 
 @Component({
   standalone: true,
-  imports: [DatePipe, FormsModule, ButtonComponent, InputComponent, CardSquareComponent],
+  imports: [DatePipe, FormsModule, ButtonComponent, InputComponent],
   styleUrl: './leilao-reverso.scss',
   templateUrl: './leilao-reverso.html',
 })
@@ -40,7 +40,11 @@ export class LeilaoReverso {
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
       const id = params.get('mapa');
       const token = params.get('convite') ?? '';
-      this.invitationToken.set(token);
+      if (token !== this.invitationToken()) {
+        // Um convite reenviado invalida a sessão anterior. Nunca reutilizar seu token.
+        if (this.invitationAccess()) this.logout();
+        this.invitationToken.set(token);
+      }
       if (this.invitationAccess()) {
         if (id && /^\d+$/.test(id)) this.open(Number(id));
         else this.load(1);
@@ -53,10 +57,10 @@ export class LeilaoReverso {
       this.invitationUsername(), this.invitationPassword(), this.invitationToken(),
     ), response => {
       this.invitationAccess.set(response.access_token);
-      this.supplierName.set(response.supplier_name);
-      this.supplierEmail.set(response.supplier_email);
+      this.supplierName.set(response.supplier_name ?? 'Fornecedor');
+      this.supplierEmail.set(response.supplier_email ?? '');
       this.sessionUsername.set(this.invitationUsername());
-      this.sessionExpiresAt.set(response.expires_at);
+      this.sessionExpiresAt.set(response.expires_at ?? '');
       this.invitationPassword.set('');
       this.open(response.quotation_id);
     });
@@ -76,14 +80,14 @@ export class LeilaoReverso {
   }
 
   initials(): string {
-    const parts = this.supplierName().trim().split(/\s+/).filter(Boolean);
+    const parts = (this.supplierName() ?? '').trim().split(/\s+/).filter(Boolean);
     return (parts.length ? (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : '')) : 'F').toUpperCase();
   }
 
   load(page: number): void {
     this.run(this.cotacoes.invitationTenders(page, this.invitationAccess()), result => {
-      this.rows.set(result.results);
-      this.total.set(result.count);
+      this.rows.set(result.results ?? []);
+      this.total.set(result.count ?? 0);
       this.page.set(page);
     });
   }
@@ -99,7 +103,7 @@ export class LeilaoReverso {
   }
 
   send(id: number, draft: TenderBid): void {
-    const decimal = (value: string | null) => value?.trim().replace(',', '.') || null;
+    const decimal = (value: string | null | undefined) => value?.toString().trim().replace(',', '.') || null;
     const body = {
       ...draft, quoted_on: draft.quoted_on || null,
       freight: decimal(draft.freight) ?? '0', discount: decimal(draft.discount) ?? '0',
@@ -119,12 +123,12 @@ export class LeilaoReverso {
     // A consulta já terminou; o formulário carregado não deve permanecer bloqueado.
     this.busy.set(false);
     const own = result.own_offer;
-    const offers = new Map(own?.offers.map(offer => [offer.item_id, offer]));
+    const offers = new Map((own?.offers ?? []).map(offer => [offer.item_id, offer]));
     this.detail.set(result);
     this.draft.set({
       payment: '', delivery: '', quoted_on: null, freight: '0', discount: '0', notes: '',
       ...own,
-      offers: result.items.map(item => offers.get(item.id) ?? {
+      offers: (result.items ?? []).map(item => offers.get(item.id) ?? {
         item_id: item.id, unit_price: null, available_quantity: null, brand: '', notes: '',
       }),
     });
@@ -144,7 +148,8 @@ export class LeilaoReverso {
       error: (response: HttpErrorResponse) => {
         this.busy.set(false);
         if (response.status === 401 && this.invitationAccess()) this.logout();
-        this.error.set(response.error?.detail ?? 'Convite expirado, credenciais inválidas ou campos incorretos.');
+        const detail = response.error?.detail;
+        this.error.set(typeof detail === 'string' ? detail : 'Não foi possível concluir a operação. Verifique o convite ou tente novamente.');
       },
     });
   }

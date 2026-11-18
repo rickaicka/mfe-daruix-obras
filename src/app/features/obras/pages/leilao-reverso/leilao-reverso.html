@@ -1,6 +1,6 @@
 <main class="supplier-portal">
   <header class="portal-header">
-    <div class="portal-brand" aria-label="Daruix Hub">
+    <div class="portal-brand" aria-label="SGO Web">
       <span class="brand-mark">D.</span>
       <span class="brand-word">SGO <small>Web</small></span>
       <span class="brand-divider"></span>
@@ -10,7 +10,7 @@
       <div class="session-profile">
         <span class="session-avatar">{{ initials() }}</span>
         <div class="session-info">
-          <strong>{{ supplierName() }}</strong>
+          <strong>{{ supplierName() || 'Fornecedor' }}</strong>
           <span>{{ sessionUsername() }} · Acesso temporário</span>
         </div>
         <drx-button variant="tertiary" size="small" (click)="logout()">Sair</drx-button>
@@ -31,7 +31,7 @@
       <section class="login-panel" aria-labelledby="login-title">
         <div class="login-icon" aria-hidden="true">↗</div>
         <h2 id="login-title">Acessar convite</h2>
-        <p class="login-description">Utilize as credenciais recebidas no e-mail cadastrado junto à Daruix.</p>
+        <p class="login-description">Utilize as credenciais recebidas no e-mail cadastrado junto ao SGO Web.</p>
         @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
         @if (!invitationToken()) { <p class="warning" role="alert">Abra o link exclusivo recebido por e-mail para acessar seu leilão.</p> }
         <form (ngSubmit)="loginInvitation()" class="login-form">
@@ -41,7 +41,7 @@
                      [value]="invitationPassword()" (valueChange)="invitationPassword.set($event)"
                      [disabled]="busy()" />
           <label class="show-password"><input type="checkbox" [checked]="showPassword()" (change)="showPassword.set(!showPassword())" /> Mostrar senha</label>
-          <drx-button type="submit" [font]="'gothic'" [disabled]="busy() || !invitationUsername().trim() || !invitationPassword() || !invitationToken()">
+          <drx-button type="submit" [font]="'gothic'" [disabled]="busy() || !(invitationUsername() ?? '').trim() || !invitationPassword() || !invitationToken()">
             {{ busy() ? 'Validando acesso...' : 'Entrar no leilão' }}
           </drx-button>
         </form>
@@ -52,11 +52,13 @@
     <div class="portal-content">
       <div class="content-heading">
         <div><span class="eyebrow">ÁREA DO FORNECEDOR</span><h1>Leilão Reverso</h1><p>Consulte os itens e apresente sua melhor proposta.</p></div>
-        <div class="expiry"><span>Convite válido até</span><strong>{{ sessionExpiresAt() | date:'dd/MM/yyyy HH:mm' }}</strong><small>{{ supplierEmail() }}</small></div>
+        <div class="expiry"><span>Convite válido até</span><strong>{{ sessionExpiresAt() ? (sessionExpiresAt() | date:'dd/MM/yyyy HH:mm') : 'Não informado' }}</strong><small>{{ supplierEmail() }}</small></div>
       </div>
       @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
+      @if (busy() && !detail()) { <p class="portal-info" role="status">Carregando informações do mapa...</p> }
       @if (detail(); as tender) {
-        <drx-card-square [nome]="tender.code + ' · ' + tender.pc">
+        <section class="portal-panel" aria-label="Detalhes do mapa">
+          <h2 class="portal-panel-title">{{ tender.code }} · {{ tender.pc }}</h2>
           <div class="tender-summary">
             <span>Referência <strong>{{ tender.reference_date | date:'dd/MM/yyyy' }}</strong></span>
             @if (tender.delivery_date) { <span>Entrega solicitada <strong>{{ tender.delivery_date | date:'dd/MM/yyyy' }}</strong></span> }
@@ -89,14 +91,15 @@
               }
             </fieldset>
           }
-        </drx-card-square>
+        </section>
       } @else {
-        <drx-card-square nome="Meus convites">
+        <section class="portal-panel" aria-label="Meus convites">
+          <h2 class="portal-panel-title">Meus convites</h2>
           <div class="table-scroll"><table><thead><tr><th>Mapa</th><th>PC</th><th>Prazo</th><th>Status</th><th>Ações</th></tr></thead>
             <tbody>@for (tender of rows(); track tender.id) { <tr><td>{{ tender.code }}</td><td>{{ tender.pc }}</td><td>{{ tender.deadline | date:'dd/MM/yyyy HH:mm' }}</td><td>{{ tender.open ? 'Recebendo propostas' : 'Encerrada' }}</td><td><drx-button variant="secondary" size="small" [disabled]="busy()" (click)="open(tender.id)">Ver materiais</drx-button></td></tr>
             } @empty { <tr><td colspan="5">Nenhum convite para cotação encontrado.</td></tr> }</tbody></table></div>
           <div class="pager"><drx-button variant="secondary" size="small" [disabled]="busy() || page() <= 1" (click)="load(page() - 1)">Anterior</drx-button><drx-button variant="secondary" size="small" [disabled]="busy() || page() * 20 >= total()" (click)="load(page() + 1)">Próxima</drx-button></div>
-        </drx-card-square>
+        </section>
       }
     </div>
   }

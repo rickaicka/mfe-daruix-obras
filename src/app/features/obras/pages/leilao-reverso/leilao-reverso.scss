@@ -58,7 +58,13 @@ td label,.terms-grid label {display:flex;flex-direction:column;gap:7px;font-size
 @media (max-width:540px) {.portal-header {min-height:70px;flex-wrap:wrap;}.brand-area,.brand-divider,.session-info span {display:none;}.session-info{max-width:170px;}.login-intro h1 {font-size:42px;}.terms-grid {grid-template-columns:1fr;}.portal-footer {flex-direction:column;}}
 
 /* Não limitar a altura da lista de itens: a rolagem vertical pertence ao portal. */
-.portal-content, .supplier-portal, drx-card-square, fieldset {
+.portal-content, .supplier-portal, fieldset {
   min-height: 0;
 }
 fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+
+/* Painéis públicos independentes do card do DS: renderização de conteúdo projetado previsível. */
+.portal-panel { background:#fff; border:1px solid #e0e4ed; border-radius:12px; padding:24px; box-shadow:0 4px 16px rgba(24,32,51,.04); min-width:0; }
+.portal-panel-title { margin:0 0 18px; font:800 19px var(--drx-font-family-display,'Science Gothic',sans-serif); color:#252831; }
+.portal-info { padding:14px 18px; border:1px solid #dce2ec; border-radius:9px; background:#fff; font-size:13px; color:#687386; }
+@media (max-width:540px) { .portal-panel { padding:15px; } .portal-content { padding-left:12px; padding-right:12px; } }
