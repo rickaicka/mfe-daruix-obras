@@ -36,11 +36,23 @@ export class LeilaoReverso {
   readonly busy = signal(false);
   readonly error = signal('');
 
-  readonly paymentOptions: readonly string[] = [
+  readonly paymentOptions = [
     'À vista', 'Antecipado', '7 DDL', '14 DDL', '21 DDL', '28 DDL',
     '30 DDL', '35 DDL', '42 DDL', '45 DDL', '60 DDL', '90 DDL',
     '28/35 DDL', '30/60 DDL', '30/60/90 DDL', '28 DFM',
   ] as const;
+
+  private readonly quantityFormatter = new Intl.NumberFormat('pt-BR', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 6,
+  });
+
+  /** Quantidade decimal da API sem zeros finais; unidade permanece inalterada. */
+  formatQuantity(value: string | number | null | undefined): string {
+    if (value === null || value === undefined || value === '') return '—';
+    const amount = Number(String(value).trim().replace(',', '.'));
+    return Number.isFinite(amount) ? this.quantityFormatter.format(amount) : String(value);
+  }
 
   private readonly brl = new Intl.NumberFormat('pt-BR', {
     style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2,

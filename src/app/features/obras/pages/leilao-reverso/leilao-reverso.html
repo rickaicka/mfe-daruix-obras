@@ -72,7 +72,13 @@
             <fieldset [disabled]="!tender.open || !tender.participating">
               <div class="table-scroll"><table><thead><tr><th>Material / serviço</th><th>Quantidade solicitada</th><th>Sua oferta</th></tr></thead>
                 <tbody>@for (item of tender.items; track item.id; let index = $index) {
-                  <tr><th scope="row">{{ item.description }}</th><td>{{ item.quantity }} {{ item.unit }} @if (item.period) { · {{ item.period }} {{ item.period_unit }} }</td>
+                  <tr><th scope="row" class="material-details">
+                    <span class="material-name">{{ item.description }}</span>
+                    <div class="material-complement">
+                      <span class="material-complement__label">Observação Complementar</span>
+                      <span class="material-complement__value">{{ item.complementary_observation || 'Não informada' }}</span>
+                    </div>
+                  </th><td>{{ formatQuantity(item.quantity) }} {{ item.unit }} @if (item.period) { · {{ item.period }} {{ item.period_unit }} }</td>
                     <td>@if (tender.participating) {
                       <label>Preço unitário (R$) <input type="text" inputmode="decimal" autocomplete="off" placeholder="R$ 0,00" class="currency-input" [value]="formatMoney(bid.offers[index].unit_price)" (focus)="beginMoneyEdit($event, bid.offers[index].unit_price)" (blur)="updateOfferMoney($event, bid, index)" /></label>
                       <label>Observação <input [(ngModel)]="bid.offers[index].notes" maxlength="4000" /></label>
