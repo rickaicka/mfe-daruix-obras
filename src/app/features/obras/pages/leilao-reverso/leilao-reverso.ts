@@ -6,6 +6,7 @@ import { FormsModule } from '@angular/forms';
 import { ButtonComponent, InputComponent } from '@daruix/hub-ui';
 import { ActivatedRoute } from '@angular/router';
 import { Observable } from 'rxjs';
+import Swal from 'sweetalert2';
 import { CotacoesService } from '../../services/cotacoes.service';
 import type { TenderBid, TenderDetail, TenderRow } from '../../models/leilao-reverso.model';
 
@@ -291,7 +292,10 @@ export class LeilaoReverso {
   send(id: number, draft: TenderBid): void {
     const days = this.deliveryDays().trim();
     if (!/^[1-9]\d{0,3}$/.test(days)) {
-      this.error.set('Informe um prazo de entrega válido, de 1 a 9999 dias.');
+      this.showWarning(
+        'Prazo de entrega inválido',
+        'Informe um prazo de entrega válido, de 1 a 9999 dias.',
+      );
       return;
     }
     const delivery = `${Number(days)} dias ${this.deliveryDayType() === 'BUSINESS' ? 'úteis' : 'corridos'}`;
@@ -314,12 +318,16 @@ export class LeilaoReverso {
         })),
     };
     if (!body.offers.length) {
-      this.error.set('Informe um preço para pelo menos um item.');
+      this.showWarning('Proposta incompleta', 'Informe um preço para pelo menos um item.');
       return;
     }
-    this.run(this.cotacoes.submitInvitationBid(id, body, this.invitationAccess()), (result) =>
-      this.show(result),
-    );
+    this.run(this.cotacoes.submitInvitationBid(id, body, this.invitationAccess()), (result) => {
+      this.show(result);
+      this.showSuccess(
+        'Proposta recebida',
+        'Sua proposta foi registrada. Você poderá atualizá-la enquanto o leilão estiver aberto.',
+      );
+    });
   }
 
   private show(result: TenderDetail): void {
@@ -351,6 +359,42 @@ export class LeilaoReverso {
     });
   }
 
+  private showWarning(title: string, message: string): void {
+    this.error.set(message);
+    void Swal.fire({
+      icon: 'warning',
+      title,
+      text: message,
+      confirmButtonText: 'Entendi',
+      confirmButtonColor: '#c00d0e',
+    });
+  }
+
+  private showError(message: string): void {
+    this.error.set(message);
+    void Swal.fire({
+      icon: 'error',
+      title: 'Não foi possível concluir a operação',
+      text: message,
+      confirmButtonText: 'Fechar',
+      confirmButtonColor: '#c00d0e',
+    });
+  }
+
+  private showSuccess(title: string, message: string): void {
+    this.error.set('');
+    void Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'success',
+      title,
+      text: message,
+      timer: 4200,
+      timerProgressBar: true,
+      showConfirmButton: false,
+    });
+  }
+
   private run<T>(request: Observable<T>, success: (result: T) => void): void {
     if (this.busy()) return;
     this.error.set('');
@@ -366,7 +410,7 @@ export class LeilaoReverso {
         this.busy.set(false);
         if (response.status === 401 && this.invitationAccess()) this.logout();
         const detail = response.error?.detail;
-        this.error.set(
+        this.showError(
           typeof detail === 'string'
             ? detail
             : 'Não foi possível concluir a operação. Verifique o convite ou tente novamente.',

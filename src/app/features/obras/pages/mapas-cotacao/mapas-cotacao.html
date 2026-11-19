@@ -1,8 +1,4 @@
 <section class="quotation">
-  @if (error()) {
-    <p class="error" role="alert">{{ error() }}</p>
-  }
-
   @if (map(); as detail) {
     <drx-card-square [nome]="displayMapCode(detail.code)">
 <!--      <drx-button card-header-action variant="secondary" [disabled]="busy()" (click)="navigate(null)">-->
@@ -197,7 +193,7 @@
       <drx-card-square nome="Leilão reverso publicado">
         <div class="tender-actions">
           <p>Prazo das propostas {{ detail.tender_deadline | date:'dd/MM/yyyy HH:mm' }}</p>
-          <drx-button [font]="'gothic'" [disabled]="busy()" (click)="confirmCloseTender()">Encerrar leilão e atualizar propostas</drx-button>
+          <drx-button [font]="'gothic'" [disabled]="busy()" (click)="mutate('close-tender')">Encerrar e atualizar propostas</drx-button>
         </div>
       </drx-card-square>
     }

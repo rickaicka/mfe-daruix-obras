@@ -20,6 +20,7 @@ import {
   HubIconComponent,
 } from '@daruix/hub-ui';
 import { Subject, catchError, finalize, of, startWith, switchMap } from 'rxjs';
+import Swal from 'sweetalert2';
 
 import {
   QUOTATION_STATUS,
@@ -77,7 +78,10 @@ export class MapasCotacao {
     this.error.set('');
     this.busy.set(true);
     this.cotacoes.resendInvitation(map.id, map.version, supplierId).pipe(finalize(() => this.busy.set(false)), takeUntilDestroyed(this.destroyRef))
-      .subscribe({next: () => this.error.set('Reenvio solicitado. Confira o status do e-mail.'), error: (e: HttpErrorResponse) => this.report(e)});
+      .subscribe({
+        next: () => this.showSuccess('Reenvio solicitado', 'Confira o status do e-mail no sistema.'),
+        error: (e: HttpErrorResponse) => this.report(e),
+      });
   }
 
   readonly expandedCompositions = signal<ReadonlySet<string>>(new Set());
@@ -431,7 +435,22 @@ export class MapasCotacao {
     const message = early
       ? 'Encerrar o leilão antes do prazo informado aos fornecedores? As propostas já recebidas serão atualizadas e nenhum fornecedor poderá alterar ou enviar novas ofertas. Esta ação não pode ser desfeita.'
       : 'Encerrar e atualizar as propostas recebidas? O envio de novas ofertas será bloqueado.';
-    if (window.confirm(message)) this.mutate('close-tender');
+    void Swal.fire({
+      title: early ? 'Encerrar leilão antecipadamente?' : 'Encerrar leilão reverso?',
+      text: message,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Encerrar leilão',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#c00d0e',
+      cancelButtonColor: '#64748b',
+      reverseButtons: true,
+      focusCancel: true,
+    }).then((result) => {
+      if (result.isConfirmed && !this.busy() && this.tenderPending()) {
+        this.mutate('close-tender');
+      }
+    });
   }
 
   mutate(action: 'save' | QuotationMapAction): void {
@@ -440,14 +459,14 @@ export class MapasCotacao {
     const deadline = new Date(this.tenderDeadline());
     if (action === 'publish-tender') {
       if (map.quotes.length < 4 || map.quotes.length > 6) {
-        this.error.set('Selecione de 4 a 6 fornecedores antes de publicar o leilão.');
+        this.showWarning('Fornecedores insuficientes', 'Selecione de 4 a 6 fornecedores antes de publicar o leilão.');
         return;
       }
       const withoutEmail = map.quotes
         .filter(({ supplier }) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(supplier.email?.trim() ?? ''))
         .map(({ supplier }) => supplier.name);
       if (withoutEmail.length) {
-        this.error.set(`Informe um e-mail válido para: ${withoutEmail.join(', ')}.`);
+        this.showWarning('E-mail inválido', `Informe um e-mail válido para: ${withoutEmail.join(', ')}.`);
         return;
       }
     }
@@ -455,7 +474,7 @@ export class MapasCotacao {
       action === 'publish-tender' &&
       (this.dirty() || !Number.isFinite(deadline.getTime()) || deadline <= new Date())
     ) {
-      this.error.set('Salve as alterações e informe um prazo futuro para publicar.');
+      this.showWarning('Prazo inválido', 'Salve as alterações e informe um prazo futuro para publicar.');
       return;
     }
     this.error.set('');
@@ -497,6 +516,14 @@ export class MapasCotacao {
           this.dirty.set(false);
           this.map.set(this.fillOffers(updated));
           this.refresh.next();
+          const messages: Record<'save' | QuotationMapAction, string> = {
+            save: 'Cotação salva com sucesso.',
+            'publish-tender': 'Leilão publicado e convites solicitados.',
+            'close-tender': 'Leilão encerrado. Propostas atualizadas.',
+            finalize: 'Mapa finalizado com sucesso.',
+            'generate-orders': 'Ordens de compra geradas. Confira os resultados.',
+          };
+          this.showSuccess('Operação concluída', messages[action]);
         },
         error: (error) => this.report(error),
       });
@@ -556,6 +583,32 @@ export class MapasCotacao {
     };
   }
 
+  /** Alertas críticos não dependem mais da posição/rolagem do cabeçalho da tela. */
+  private showWarning(title: string, message: string): void {
+    this.error.set(message);
+    void Swal.fire({
+      icon: 'warning', title, text: message,
+      confirmButtonText: 'Entendi', confirmButtonColor: '#c00d0e',
+    });
+  }
+
+  private showSuccess(title: string, message: string): void {
+    this.error.set('');
+    void Swal.fire({
+      toast: true, position: 'top-end', icon: 'success',
+      title, text: message, showConfirmButton: false,
+      timer: 4200, timerProgressBar: true,
+    });
+  }
+
+  private showError(message: string): void {
+    this.error.set(message);
+    void Swal.fire({
+      icon: 'error', title: 'Não foi possível concluir a operação', text: message,
+      confirmButtonText: 'Fechar', confirmButtonColor: '#c00d0e',
+    });
+  }
+
   private report(error: HttpErrorResponse): void {
     const response: unknown = error.error;
     const rawText =
@@ -568,9 +621,7 @@ export class MapasCotacao {
       error.headers?.get('content-type')?.includes('text/html') ||
       (typeof rawText === 'string' && /^\s*<(?:!doctype\s+html|html[\s>])/i.test(rawText))
     ) {
-      this.error.set(
-        'A API de cotações retornou uma página HTML. Confira o endereço do BFF ou o proxy do Shell.',
-      );
+      this.showError('A API de cotações retornou uma página HTML. Confira o endereço do BFF ou o proxy do Shell.');
       return;
     }
 
@@ -579,9 +630,9 @@ export class MapasCotacao {
       if (value && typeof value === 'object') return Object.values(value).flatMap(flatten);
       return [];
     };
-    this.error.set(
-      (typeof error.error === 'object' && flatten(error.error).join(' ')) ||
-        'Não foi possível concluir a operação.',
-    );
+    const message = (typeof response === 'object' && response !== null && flatten(response).join(' ')) ||
+      (typeof response === 'string' && !/^\s*</.test(response) ? response : '') ||
+      'Não foi possível concluir a operação.';
+    this.showError(message);
   }
 }

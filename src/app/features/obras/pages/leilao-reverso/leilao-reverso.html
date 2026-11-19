@@ -32,7 +32,6 @@
         <div class="login-icon" aria-hidden="true">↗</div>
         <h2 id="login-title">Acessar convite</h2>
         <p class="login-description">Utilize as credenciais recebidas no e-mail cadastrado junto ao SGO Web.</p>
-        @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
         @if (!invitationToken()) { <p class="warning" role="alert">Abra o link exclusivo recebido por e-mail para acessar seu leilão.</p> }
         <form (ngSubmit)="loginInvitation()" class="login-form">
           <drx-input label="Login temporário" autocomplete="username" [value]="invitationUsername()"
@@ -54,7 +53,6 @@
         <div><span class="eyebrow">ÁREA DO FORNECEDOR</span><h1>Leilão Reverso</h1><p>Consulte os itens e apresente sua melhor proposta.</p></div>
         <div class="expiry"><span>Convite válido até</span><strong>{{ sessionExpiresAt() ? (sessionExpiresAt() | date:'dd/MM/yyyy HH:mm') : 'Não informado' }}</strong><small>{{ supplierEmail() }}</small></div>
       </div>
-      @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
       @if (busy() && !detail()) { <p class="portal-info" role="status">Carregando informações do mapa...</p> }
       @if (detail(); as tender) {
         <section class="portal-panel" aria-label="Detalhes do mapa">
