@@ -74,14 +74,20 @@
                 <tbody>@for (item of tender.items; track item.id; let index = $index) {
                   <tr><th scope="row" class="material-details">
                     <span class="material-name">{{ item.description }}</span>
-                    <div class="material-complement">
-                      <span class="material-complement__label">Observação Complementar</span>
-                      <span class="material-complement__value">{{ item.complementary_observation || 'Não informada' }}</span>
-                    </div>
+                    @if (tender.participating) {
+                      <label class="material-complement" [attr.for]="'item-complement-' + item.id">
+                        <span class="material-complement__label">Observação Complementar</span>
+                        <textarea [id]="'item-complement-' + item.id"
+                          [(ngModel)]="bid.offers[index].notes"
+                          [attr.aria-label]="'Observação complementar para ' + item.description"
+                          placeholder="Informe detalhes adicionais deste material ou serviço"
+                          maxlength="4000" rows="3"></textarea>
+                      </label>
+                    }
                   </th><td>{{ formatQuantity(item.quantity) }} {{ item.unit }} @if (item.period) { · {{ item.period }} {{ item.period_unit }} }</td>
                     <td>@if (tender.participating) {
                       <label>Preço unitário (R$) <input type="text" inputmode="decimal" autocomplete="off" placeholder="R$ 0,00" class="currency-input" [value]="formatMoney(bid.offers[index].unit_price)" (focus)="beginMoneyEdit($event, bid.offers[index].unit_price)" (blur)="updateOfferMoney($event, bid, index)" /></label>
-                      <label>Observação <input [(ngModel)]="bid.offers[index].notes" maxlength="4000" /></label>
+
                     }</td></tr>
                 }</tbody></table></div>
               @if (tender.participating) {

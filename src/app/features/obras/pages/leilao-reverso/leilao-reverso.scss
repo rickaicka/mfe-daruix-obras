@@ -80,3 +80,16 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 .terms-grid select:focus-visible, .currency-input:focus-visible {
   outline: 2px solid #c00d0e; outline-offset: 1px;
 }
+
+/* Observação complementar editável e específica de cada item da oferta. */
+.material-details { vertical-align: top; }
+.material-name { display: block; font-weight: 500; }
+.material-complement { display: flex; flex-direction: column; gap: 4px; margin-top: 14px; min-width: 0; }
+.material-complement__label { font-size: 12px; font-weight: 700; color: #252831; }
+.material-complement textarea {
+  width: 100%; box-sizing: border-box; min-height: 76px;
+  padding: 11px 12px; border: 1px solid #d4d9e2; border-radius: 8px;
+  background: #fff; color: #252831; font: inherit;
+  font-weight: 400; resize: vertical;
+}
+.material-complement textarea:focus-visible { outline: 2px solid #c00d0e; outline-offset: 1px; }
