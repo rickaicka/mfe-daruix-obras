@@ -36,7 +36,7 @@ export class LeilaoReverso {
   readonly busy = signal(false);
   readonly error = signal('');
 
-  readonly paymentOptions = [
+  readonly paymentOptions: readonly string[] = [
     'À vista', 'Antecipado', '7 DDL', '14 DDL', '21 DDL', '28 DDL',
     '30 DDL', '35 DDL', '42 DDL', '45 DDL', '60 DDL', '90 DDL',
     '28/35 DDL', '30/60 DDL', '30/60/90 DDL', '28 DFM',
