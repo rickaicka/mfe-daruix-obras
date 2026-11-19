@@ -36,11 +36,24 @@ export class LeilaoReverso {
   readonly busy = signal(false);
   readonly error = signal('');
 
-  readonly paymentOptions = [
-    'À vista', 'Antecipado', '7 DDL', '14 DDL', '21 DDL', '28 DDL',
-    '30 DDL', '35 DDL', '42 DDL', '45 DDL', '60 DDL', '90 DDL',
-    '28/35 DDL', '30/60 DDL', '30/60/90 DDL', '28 DFM',
-  ] as const;
+  readonly paymentOptions: readonly string[] = [
+    'À vista',
+    'Antecipado',
+    '7 DDL',
+    '14 DDL',
+    '21 DDL',
+    '28 DDL',
+    '30 DDL',
+    '35 DDL',
+    '42 DDL',
+    '45 DDL',
+    '60 DDL',
+    '90 DDL',
+    '28/35 DDL',
+    '30/60 DDL',
+    '30/60/90 DDL',
+    '28 DFM',
+  ];
 
   private readonly quantityFormatter = new Intl.NumberFormat('pt-BR', {
     minimumFractionDigits: 0,
@@ -55,7 +68,10 @@ export class LeilaoReverso {
   }
 
   private readonly brl = new Intl.NumberFormat('pt-BR', {
-    style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2,
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   });
 
   /** Valor decimal da API -> texto em reais; não altera os dados enviados ao servidor. */
@@ -119,7 +135,7 @@ export class LeilaoReverso {
   }
 
   constructor() {
-    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       const id = params.get('mapa');
       const token = params.get('convite') ?? '';
       if (token !== this.invitationToken()) {
@@ -135,17 +151,22 @@ export class LeilaoReverso {
   }
 
   loginInvitation(): void {
-    this.run(this.cotacoes.loginInvitation(
-      this.invitationUsername(), this.invitationPassword(), this.invitationToken(),
-    ), response => {
-      this.invitationAccess.set(response.access_token);
-      this.supplierName.set(response.supplier_name ?? 'Fornecedor');
-      this.supplierEmail.set(response.supplier_email ?? '');
-      this.sessionUsername.set(this.invitationUsername());
-      this.sessionExpiresAt.set(response.expires_at ?? '');
-      this.invitationPassword.set('');
-      this.open(response.quotation_id);
-    });
+    this.run(
+      this.cotacoes.loginInvitation(
+        this.invitationUsername(),
+        this.invitationPassword(),
+        this.invitationToken(),
+      ),
+      (response) => {
+        this.invitationAccess.set(response.access_token);
+        this.supplierName.set(response.supplier_name ?? 'Fornecedor');
+        this.supplierEmail.set(response.supplier_email ?? '');
+        this.sessionUsername.set(this.invitationUsername());
+        this.sessionExpiresAt.set(response.expires_at ?? '');
+        this.invitationPassword.set('');
+        this.open(response.quotation_id);
+      },
+    );
   }
 
   logout(): void {
@@ -163,11 +184,13 @@ export class LeilaoReverso {
 
   initials(): string {
     const parts = (this.supplierName() ?? '').trim().split(/\s+/).filter(Boolean);
-    return (parts.length ? (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : '')) : 'F').toUpperCase();
+    return (
+      parts.length ? parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : '') : 'F'
+    ).toUpperCase();
   }
 
   load(page: number): void {
-    this.run(this.cotacoes.invitationTenders(page, this.invitationAccess()), result => {
+    this.run(this.cotacoes.invitationTenders(page, this.invitationAccess()), (result) => {
       this.rows.set(result.results ?? []);
       this.total.set(result.count ?? 0);
       this.page.set(page);
@@ -181,38 +204,62 @@ export class LeilaoReverso {
   }
 
   open(id: number): void {
-    this.run(this.cotacoes.invitationTender(id, this.invitationAccess()), result => this.show(result));
+    this.run(this.cotacoes.invitationTender(id, this.invitationAccess()), (result) =>
+      this.show(result),
+    );
   }
 
   send(id: number, draft: TenderBid): void {
-    const decimal = (value: string | null | undefined) => value?.toString().trim().replace(',', '.') || null;
+    const decimal = (value: string | null | undefined) =>
+      value?.toString().trim().replace(',', '.') || null;
     const body = {
-      ...draft, quoted_on: null, // Preenchido exclusivamente pelo BFF na submissão.
-      freight: decimal(draft.freight) ?? '0', discount: decimal(draft.discount) ?? '0',
-      offers: draft.offers.filter(offer => decimal(offer.unit_price) !== null).map(offer => ({
-        item_id: offer.item_id, unit_price: decimal(offer.unit_price),
-        available_quantity: null, brand: '', notes: offer.notes,
-      })),
+      ...draft,
+      quoted_on: null, // Preenchido exclusivamente pelo BFF na submissão.
+      freight: decimal(draft.freight) ?? '0',
+      discount: decimal(draft.discount) ?? '0',
+      offers: draft.offers
+        .filter((offer) => decimal(offer.unit_price) !== null)
+        .map((offer) => ({
+          item_id: offer.item_id,
+          unit_price: decimal(offer.unit_price),
+          available_quantity: null,
+          brand: '',
+          notes: offer.notes,
+        })),
     };
     if (!body.offers.length) {
       this.error.set('Informe um preço para pelo menos um item.');
       return;
     }
-    this.run(this.cotacoes.submitInvitationBid(id, body, this.invitationAccess()), result => this.show(result));
+    this.run(this.cotacoes.submitInvitationBid(id, body, this.invitationAccess()), (result) =>
+      this.show(result),
+    );
   }
 
   private show(result: TenderDetail): void {
     // A consulta já terminou; o formulário carregado não deve permanecer bloqueado.
     this.busy.set(false);
     const own = result.own_offer;
-    const offers = new Map((own?.offers ?? []).map(offer => [offer.item_id, offer]));
+    const offers = new Map((own?.offers ?? []).map((offer) => [offer.item_id, offer]));
     this.detail.set(result);
     this.draft.set({
-      payment: '', delivery: '', quoted_on: null, freight: '0', discount: '0', notes: '',
+      payment: '',
+      delivery: '',
+      quoted_on: null,
+      freight: '0',
+      discount: '0',
+      notes: '',
       ...own,
-      offers: (result.items ?? []).map(item => offers.get(item.id) ?? {
-        item_id: item.id, unit_price: null, available_quantity: null, brand: '', notes: '',
-      }),
+      offers: (result.items ?? []).map(
+        (item) =>
+          offers.get(item.id) ?? {
+            item_id: item.id,
+            unit_price: null,
+            available_quantity: null,
+            brand: '',
+            notes: '',
+          },
+      ),
     });
   }
 
@@ -231,7 +278,11 @@ export class LeilaoReverso {
         this.busy.set(false);
         if (response.status === 401 && this.invitationAccess()) this.logout();
         const detail = response.error?.detail;
-        this.error.set(typeof detail === 'string' ? detail : 'Não foi possível concluir a operação. Verifique o convite ou tente novamente.');
+        this.error.set(
+          typeof detail === 'string'
+            ? detail
+            : 'Não foi possível concluir a operação. Verifique o convite ou tente novamente.',
+        );
       },
     });
   }

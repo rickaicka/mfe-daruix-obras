@@ -16,7 +16,15 @@ export interface TenderRow {
   deadline: string;
   open: boolean;
 }
-export interface TenderItem { id: number; description: string; quantity: string; unit: string; period: number | null; period_unit: string }
+export interface TenderItem {
+  id: number;
+  description: string;
+  quantity: string;
+  unit: string;
+  period: number | null;
+  period_unit: string;
+  complementary_observation?: string | null;
+}
 export interface TenderOffer { item_id: number; unit_price: string | null; available_quantity: string | null; brand: string; notes: string }
 export interface TenderBid {
   offers: TenderOffer[];
