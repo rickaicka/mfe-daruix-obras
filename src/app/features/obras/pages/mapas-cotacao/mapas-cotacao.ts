@@ -423,6 +423,17 @@ export class MapasCotacao {
     return prices.length ? Math.min(...prices) : null;
   }
 
+  confirmCloseTender(): void {
+    const map = this.map();
+    if (!map || !this.tenderPending() || this.busy()) return;
+    const deadline = map.tender_deadline ? new Date(map.tender_deadline) : null;
+    const early = deadline !== null && deadline.getTime() > Date.now();
+    const message = early
+      ? 'Encerrar o leilão antes do prazo informado aos fornecedores? As propostas já recebidas serão atualizadas e nenhum fornecedor poderá alterar ou enviar novas ofertas. Esta ação não pode ser desfeita.'
+      : 'Encerrar e atualizar as propostas recebidas? O envio de novas ofertas será bloqueado.';
+    if (window.confirm(message)) this.mutate('close-tender');
+  }
+
   mutate(action: 'save' | QuotationMapAction): void {
     const map = this.map();
     if (!map || this.busy() || (action === 'finalize' && this.dirty())) return;
