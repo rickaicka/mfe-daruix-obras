@@ -33,13 +33,42 @@ export class LeilaoReverso {
   readonly total = signal(0);
   readonly detail = signal<TenderDetail | null>(null);
   readonly draft = signal<TenderBid | null>(null);
+  // Entradas ainda em edição para atualizar o resumo antes do blur.
+  readonly moneyPreview = signal<Record<string, string>>({});
   readonly busy = signal(false);
   readonly error = signal('');
 
+  // O prazo é contado a partir da CRIAÇÃO da OC, nunca da proposta.
+  readonly deliveryDays = signal('');
+  readonly deliveryDayType = signal<'BUSINESS' | 'CALENDAR'>('CALENDAR');
+
+  private restoreDelivery(value: string | null | undefined): void {
+    const match = /^(\d+)\s+dias?\s+(úteis|uteis|corridos)$/i.exec((value ?? '').trim());
+    this.deliveryDays.set(match ? match[1] : '');
+    this.deliveryDayType.set(
+      match?.[2].toLowerCase().startsWith('ú') || match?.[2].toLowerCase().startsWith('u')
+        ? 'BUSINESS'
+        : 'CALENDAR',
+    );
+  }
+
   readonly paymentOptions = [
-    'À vista', 'Antecipado', '7 DDL', '14 DDL', '21 DDL', '28 DDL',
-    '30 DDL', '35 DDL', '42 DDL', '45 DDL', '60 DDL', '90 DDL',
-    '28/35 DDL', '30/60 DDL', '30/60/90 DDL', '28 DFM',
+    'À vista',
+    'Antecipado',
+    '7 DDL',
+    '14 DDL',
+    '21 DDL',
+    '28 DDL',
+    '30 DDL',
+    '35 DDL',
+    '42 DDL',
+    '45 DDL',
+    '60 DDL',
+    '90 DDL',
+    '28/35 DDL',
+    '30/60 DDL',
+    '30/60/90 DDL',
+    '28 DFM',
   ] as readonly string[];
 
   private readonly quantityFormatter = new Intl.NumberFormat('pt-BR', {
@@ -55,7 +84,10 @@ export class LeilaoReverso {
   }
 
   private readonly brl = new Intl.NumberFormat('pt-BR', {
-    style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2,
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   });
 
   /** Valor decimal da API -> texto em reais; não altera os dados enviados ao servidor. */
@@ -101,6 +133,62 @@ export class LeilaoReverso {
     return amount.toFixed(2);
   }
 
+  /** Mantém a máscara de blur e recalcula o total durante a digitação. */
+  onMoneyInput(event: Event, key: string): void {
+    const raw = (event.target as HTMLInputElement).value;
+    this.moneyPreview.update((current) => ({ ...current, [key]: raw }));
+  }
+
+  private clearMoneyPreview(key: string): void {
+    this.moneyPreview.update((current) => {
+      const next = { ...current };
+      delete next[key];
+      return next;
+    });
+  }
+
+  /** Converte tanto valores numéricos da API quanto texto em edição. */
+  private moneyNumber(value: string | number | null | undefined, key: string): number {
+    const preview = this.moneyPreview();
+    if (Object.prototype.hasOwnProperty.call(preview, key)) {
+      return Number(this.parseMoneyInput(preview[key]) ?? 0);
+    }
+    if (value === null || value === undefined || value === '') return 0;
+    const number = Number(String(value).trim().replace(',', '.'));
+    return Number.isFinite(number) ? number : 0;
+  }
+
+  /** Soma os itens cotados (quantidade × preço unitário × período, quando houver). */
+  quotationSubtotal(bid: TenderBid, tender: TenderDetail): number {
+    return tender.items.reduce((total, item) => {
+      const offer = bid.offers.find((row) => row.item_id === item.id);
+      if (!offer) return total;
+      const quantity = Number(String(item.quantity).replace(',', '.'));
+      const period = item.period ?? 1;
+      const unitPrice = this.moneyNumber(offer.unit_price, 'offer:' + item.id);
+      return total + (Number.isFinite(quantity) ? quantity : 0) * period * unitPrice;
+    }, 0);
+  }
+
+  quotationFreight(bid: TenderBid): number {
+    return this.moneyNumber(bid.freight, 'freight');
+  }
+
+  quotationDiscount(bid: TenderBid): number {
+    return this.moneyNumber(bid.discount, 'discount');
+  }
+
+  quotationTotal(bid: TenderBid, tender: TenderDetail): number {
+    return (
+      this.quotationSubtotal(bid, tender) + this.quotationFreight(bid) - this.quotationDiscount(bid)
+    );
+  }
+
+  /** Permite exibir inclusive resultados negativos sem ocultar a moeda. */
+  formatTotal(value: number): string {
+    return this.brl.format(value);
+  }
+
   /** Atualiza o modelo e formata apenas quando o campo perde o foco. */
   updateOfferMoney(event: FocusEvent, bid: TenderBid, index: number): void {
     const input = event.target as HTMLInputElement;
@@ -108,6 +196,7 @@ export class LeilaoReverso {
     if (!offer) return;
     const value = this.parseMoneyInput(input.value);
     offer.unit_price = value;
+    this.clearMoneyPreview('offer:' + offer.item_id);
     input.value = this.formatMoney(value);
   }
 
@@ -115,11 +204,12 @@ export class LeilaoReverso {
     const input = event.target as HTMLInputElement;
     const value = this.parseMoneyInput(input.value) ?? '0.00';
     bid[field] = value;
+    this.clearMoneyPreview(field);
     input.value = this.formatMoney(value);
   }
 
   constructor() {
-    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       const id = params.get('mapa');
       const token = params.get('convite') ?? '';
       if (token !== this.invitationToken()) {
@@ -135,17 +225,22 @@ export class LeilaoReverso {
   }
 
   loginInvitation(): void {
-    this.run(this.cotacoes.loginInvitation(
-      this.invitationUsername(), this.invitationPassword(), this.invitationToken(),
-    ), response => {
-      this.invitationAccess.set(response.access_token);
-      this.supplierName.set(response.supplier_name ?? 'Fornecedor');
-      this.supplierEmail.set(response.supplier_email ?? '');
-      this.sessionUsername.set(this.invitationUsername());
-      this.sessionExpiresAt.set(response.expires_at ?? '');
-      this.invitationPassword.set('');
-      this.open(response.quotation_id);
-    });
+    this.run(
+      this.cotacoes.loginInvitation(
+        this.invitationUsername(),
+        this.invitationPassword(),
+        this.invitationToken(),
+      ),
+      (response) => {
+        this.invitationAccess.set(response.access_token);
+        this.supplierName.set(response.supplier_name ?? 'Fornecedor');
+        this.supplierEmail.set(response.supplier_email ?? '');
+        this.sessionUsername.set(this.invitationUsername());
+        this.sessionExpiresAt.set(response.expires_at ?? '');
+        this.invitationPassword.set('');
+        this.open(response.quotation_id);
+      },
+    );
   }
 
   logout(): void {
@@ -157,17 +252,22 @@ export class LeilaoReverso {
     this.sessionExpiresAt.set('');
     this.detail.set(null);
     this.draft.set(null);
+    this.moneyPreview.set({});
+    this.deliveryDays.set('');
+    this.deliveryDayType.set('CALENDAR');
     this.rows.set([]);
     this.error.set('');
   }
 
   initials(): string {
     const parts = (this.supplierName() ?? '').trim().split(/\s+/).filter(Boolean);
-    return (parts.length ? (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : '')) : 'F').toUpperCase();
+    return (
+      parts.length ? parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : '') : 'F'
+    ).toUpperCase();
   }
 
   load(page: number): void {
-    this.run(this.cotacoes.invitationTenders(page, this.invitationAccess()), result => {
+    this.run(this.cotacoes.invitationTenders(page, this.invitationAccess()), (result) => {
       this.rows.set(result.results ?? []);
       this.total.set(result.count ?? 0);
       this.page.set(page);
@@ -177,42 +277,77 @@ export class LeilaoReverso {
   back(): void {
     this.detail.set(null);
     this.draft.set(null);
+    this.moneyPreview.set({});
+    this.deliveryDays.set('');
     this.load(this.page());
   }
 
   open(id: number): void {
-    this.run(this.cotacoes.invitationTender(id, this.invitationAccess()), result => this.show(result));
+    this.run(this.cotacoes.invitationTender(id, this.invitationAccess()), (result) =>
+      this.show(result),
+    );
   }
 
   send(id: number, draft: TenderBid): void {
-    const decimal = (value: string | null | undefined) => value?.toString().trim().replace(',', '.') || null;
+    const days = this.deliveryDays().trim();
+    if (!/^[1-9]\d{0,3}$/.test(days)) {
+      this.error.set('Informe um prazo de entrega válido, de 1 a 9999 dias.');
+      return;
+    }
+    const delivery = `${Number(days)} dias ${this.deliveryDayType() === 'BUSINESS' ? 'úteis' : 'corridos'}`;
+    const decimal = (value: string | null | undefined) =>
+      value?.toString().trim().replace(',', '.') || null;
     const body = {
-      ...draft, quoted_on: null, // Preenchido exclusivamente pelo BFF na submissão.
-      freight: decimal(draft.freight) ?? '0', discount: decimal(draft.discount) ?? '0',
-      offers: draft.offers.filter(offer => decimal(offer.unit_price) !== null).map(offer => ({
-        item_id: offer.item_id, unit_price: decimal(offer.unit_price),
-        available_quantity: null, brand: '', notes: offer.notes,
-      })),
+      ...draft,
+      delivery,
+      quoted_on: null, // Preenchido exclusivamente pelo BFF na submissão.
+      freight: decimal(draft.freight) ?? '0',
+      discount: decimal(draft.discount) ?? '0',
+      offers: draft.offers
+        .filter((offer) => decimal(offer.unit_price) !== null)
+        .map((offer) => ({
+          item_id: offer.item_id,
+          unit_price: decimal(offer.unit_price),
+          available_quantity: null,
+          brand: '',
+          notes: offer.notes,
+        })),
     };
     if (!body.offers.length) {
       this.error.set('Informe um preço para pelo menos um item.');
       return;
     }
-    this.run(this.cotacoes.submitInvitationBid(id, body, this.invitationAccess()), result => this.show(result));
+    this.run(this.cotacoes.submitInvitationBid(id, body, this.invitationAccess()), (result) =>
+      this.show(result),
+    );
   }
 
   private show(result: TenderDetail): void {
     // A consulta já terminou; o formulário carregado não deve permanecer bloqueado.
     this.busy.set(false);
+    this.moneyPreview.set({});
     const own = result.own_offer;
-    const offers = new Map((own?.offers ?? []).map(offer => [offer.item_id, offer]));
+    this.restoreDelivery(own?.delivery);
+    const offers = new Map((own?.offers ?? []).map((offer) => [offer.item_id, offer]));
     this.detail.set(result);
     this.draft.set({
-      payment: '', delivery: '', quoted_on: null, freight: '0', discount: '0', notes: '',
+      payment: '',
+      delivery: '',
+      quoted_on: null,
+      freight: '0',
+      discount: '0',
+      notes: '',
       ...own,
-      offers: (result.items ?? []).map(item => offers.get(item.id) ?? {
-        item_id: item.id, unit_price: null, available_quantity: null, brand: '', notes: '',
-      }),
+      offers: (result.items ?? []).map(
+        (item) =>
+          offers.get(item.id) ?? {
+            item_id: item.id,
+            unit_price: null,
+            available_quantity: null,
+            brand: '',
+            notes: '',
+          },
+      ),
     });
   }
 
@@ -231,8 +366,16 @@ export class LeilaoReverso {
         this.busy.set(false);
         if (response.status === 401 && this.invitationAccess()) this.logout();
         const detail = response.error?.detail;
-        this.error.set(typeof detail === 'string' ? detail : 'Não foi possível concluir a operação. Verifique o convite ou tente novamente.');
+        this.error.set(
+          typeof detail === 'string'
+            ? detail
+            : 'Não foi possível concluir a operação. Verifique o convite ou tente novamente.',
+        );
       },
     });
+  }
+
+  updateDeliveryDays(value: string | number | null | undefined): void {
+    this.deliveryDays.set(value == null ? '' : String(value));
   }
 }

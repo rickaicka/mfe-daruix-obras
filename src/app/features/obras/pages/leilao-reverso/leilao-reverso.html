@@ -86,7 +86,7 @@
                     }
                   </th><td>{{ formatQuantity(item.quantity) }} {{ item.unit }} @if (item.period) { · {{ item.period }} {{ item.period_unit }} }</td>
                     <td>@if (tender.participating) {
-                      <label>Preço unitário (R$) <input type="text" inputmode="decimal" autocomplete="off" placeholder="R$ 0,00" class="currency-input" [value]="formatMoney(bid.offers[index].unit_price)" (focus)="beginMoneyEdit($event, bid.offers[index].unit_price)" (blur)="updateOfferMoney($event, bid, index)" /></label>
+                      <label>Preço unitário (R$) <input type="text" inputmode="decimal" autocomplete="off" placeholder="R$ 0,00" class="currency-input" [value]="formatMoney(bid.offers[index].unit_price)" (focus)="beginMoneyEdit($event, bid.offers[index].unit_price)" (input)="onMoneyInput($event, 'offer:' + item.id)" (blur)="updateOfferMoney($event, bid, index)" /></label>
 
                     }</td></tr>
                 }</tbody></table></div>
@@ -103,11 +103,36 @@
                       }
                     </select>
                   </label>
-                  <label>Prazo de entrega <input [(ngModel)]="bid.delivery" maxlength="255" /></label>
-                  <label>Frete (R$) <input type="text" inputmode="decimal" autocomplete="off" placeholder="R$ 0,00" class="currency-input" [value]="formatMoney(bid.freight)" (focus)="beginMoneyEdit($event, bid.freight)" (blur)="updateTermsMoney($event, bid, 'freight')" /></label>
-                  <label>Desconto (R$) <input type="text" inputmode="decimal" autocomplete="off" placeholder="R$ 0,00" class="currency-input" [value]="formatMoney(bid.discount)" (focus)="beginMoneyEdit($event, bid.discount)" (blur)="updateTermsMoney($event, bid, 'discount')" /></label>
+                  <div class="delivery-terms" role="group" aria-label="Prazo de entrega">
+                    <label>Prazo de entrega (dias)
+                      <input type="number" min="1" max="9999" step="1" inputmode="numeric"
+                             [ngModel]="deliveryDays()"
+                             (ngModelChange)="updateDeliveryDays($event)"
+                        placeholder="Ex.: 10" aria-label="Quantidade de dias para entrega" />
+                    </label>
+                    <label>Tipo de dias
+                      <select [ngModel]="deliveryDayType()" (ngModelChange)="deliveryDayType.set($event)" aria-label="Contagem dos dias de entrega">
+                        <option value="BUSINESS">Úteis</option>
+                        <option value="CALENDAR">Corridos</option>
+                      </select>
+                    </label>
+                  </div>
+                  <label>Frete (R$) <input type="text" inputmode="decimal" autocomplete="off" placeholder="R$ 0,00" class="currency-input" [value]="formatMoney(bid.freight)" (focus)="beginMoneyEdit($event, bid.freight)" (input)="onMoneyInput($event, 'freight')" (blur)="updateTermsMoney($event, bid, 'freight')" /></label>
+                  <label>Desconto (R$) <input type="text" inputmode="decimal" autocomplete="off" placeholder="R$ 0,00" class="currency-input" [value]="formatMoney(bid.discount)" (focus)="beginMoneyEdit($event, bid.discount)" (input)="onMoneyInput($event, 'discount')" (blur)="updateTermsMoney($event, bid, 'discount')" /></label>
                   <label class="terms-notes">Observações <textarea [(ngModel)]="bid.notes" maxlength="4000"></textarea></label>
                 </div>
+                <section class="quotation-total" aria-label="Resumo da cotação" aria-live="polite">
+                  <h3>Cotação Total</h3>
+                  <div class="quotation-total__breakdown">
+                    <span>Subtotal dos itens</span><strong>{{ formatTotal(quotationSubtotal(bid, tender)) }}</strong>
+                    <span>Frete (+)</span><strong>{{ formatTotal(quotationFreight(bid)) }}</strong>
+                    <span>Desconto (−)</span><strong>− {{ formatTotal(quotationDiscount(bid)) }}</strong>
+                  </div>
+                  <div class="quotation-total__result">
+                    <span>Total da cotação</span>
+                    <strong>{{ formatTotal(quotationTotal(bid, tender)) }}</strong>
+                  </div>
+                </section>
                 <div class="form-actions"><drx-button [font]="'gothic'" [disabled]="busy()" (click)="send(tender.id, bid)">{{ tender.own_offer ? 'Atualizar minha proposta' : 'Enviar minha proposta' }}</drx-button></div>
               }
             </fieldset>
