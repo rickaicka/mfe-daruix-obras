@@ -144,6 +144,10 @@
                           (valueChange)="updateQuoteMoney(discountKey, quote, 'discount', $event)"
                           [disabled]="busy() || !writable()" />
                       </div>
+                      <div class="quote-total" aria-live="polite">
+                        <span class="quote-total__label">Valor total da cotação</span>
+                        <strong class="quote-total__value">{{ formatBrl(quoteTotal(quote)) }}</strong>
+                      </div>
                       <drx-textarea label="Observações" [rows]="2" [maxLength]="4000" [value]="quote.notes" (valueChange)="quote.notes = $event; dirty.set(true)" [disabled]="busy() || !writable()" />
                     </td>
                   }

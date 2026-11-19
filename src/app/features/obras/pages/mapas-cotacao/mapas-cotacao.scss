@@ -274,3 +274,24 @@ table:not(.comparison--with-quotes) {
   white-space: nowrap;
   font-weight: 600;
 }
+
+/* Resumo financeiro de cada fornecedor, antes das observações gerais. */
+.quote-total {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--drx-color-border-subtle, #e6e8f0);
+  border-radius: 8px;
+  background: var(--drx-color-surface-muted, #f5f6fa);
+}
+
+.quote-total__label {
+  font-family: var(--drx-font-family-display, 'Science Gothic', sans-serif);
+  font-size: var(--drx-font-size-caption, 12px);
+}
+
+.quote-total__value {
+  font-size: var(--drx-font-size-body-md, 16px);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}

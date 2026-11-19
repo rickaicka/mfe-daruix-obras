@@ -507,6 +507,21 @@ export class MapasCotacao {
     return price === null ? null : Number(price) * Number(item.quantity) * (item.period ?? 1);
   }
 
+  /** Total individual do fornecedor: itens cotados + frete - desconto.
+   * Considera todos os itens, não apenas os selecionados para gerar OC.
+   */
+  quoteTotal(quote: QuotationMap['quotes'][number]): number {
+    const items = this.map()?.items ?? [];
+    const subtotal = items.reduce((sum, item, index) => {
+      const offer = quote.offers[index];
+      if (!offer) return sum;
+      return sum + (this.lineTotal(item, offer) ?? 0);
+    }, 0);
+    const freight = Number(this.parseMoney(quote.freight) ?? 0);
+    const discount = Number(this.parseMoney(quote.discount) ?? 0);
+    return Math.round((subtotal + freight - discount + Number.EPSILON) * 100) / 100;
+  }
+
   private decimal(value: string | null): string | null {
     return value?.trim().replace(',', '.') || null;
   }
