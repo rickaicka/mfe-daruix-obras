@@ -51,13 +51,6 @@
                 @for (quote of detail.quotes; track quote.supplier.id; let supplierIndex = $index) {
                   <th scope="col" class="supplier-heading">
                     {{ quote.supplier.name }}
-                    @if (tenderPending()) {
-                      <drx-button variant="secondary" size="small"
-                        [disabled]="busy()"
-                        (click)="resendInvitation(quote.supplier.id)">
-                        Reenviar convite
-                      </drx-button>
-                    }
                     @if (writable() && !tenderPending()) {
                       <drx-button variant="tertiary" size="small" [disabled]="busy()"
                         (click)="detail.quotes.splice(supplierIndex, 1); dirty.set(true)">
@@ -177,6 +170,22 @@
           <drx-button [font]="'gothic'" [disabled]="busy() || dirty() || !tenderDeadline()" (click)="mutate('publish-tender')">
             Publicar leilão e convidar fornecedores
           </drx-button>
+        </div>
+      </drx-card-square>
+    }
+    @if (tenderPending() && detail.status === 'DRAFT' && detail.quotes.length) {
+      <drx-card-square nome="Reenviar convites">
+        <p class="invitation-help">Selecione o fornecedor que deverá receber um novo convite de acesso ao leilão.</p>
+        <div class="invitation-actions">
+          @for (quote of detail.quotes; track quote.supplier.id) {
+            <div class="invitation-supplier">
+              <span class="invitation-name" [title]="quote.supplier.name">{{ quote.supplier.name }}</span>
+              <drx-button variant="secondary" size="small" [disabled]="busy()"
+                (click)="resendInvitation(quote.supplier.id)">
+                Reenviar convite
+              </drx-button>
+            </div>
+          }
         </div>
       </drx-card-square>
     }

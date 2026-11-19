@@ -242,3 +242,35 @@ table:not(.comparison--with-quotes) {
   display: block;
   min-inline-size: 0;
 }
+
+/* Reenvio de convites fora da tabela horizontal de comparação. */
+.invitation-help {
+  margin: 0 0 14px;
+  color: var(--drx-color-text-muted, #687386);
+}
+
+.invitation-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 12px;
+}
+
+.invitation-supplier {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--drx-color-border-subtle, #e6e8f0);
+  border-radius: 8px;
+}
+
+.invitation-name {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
