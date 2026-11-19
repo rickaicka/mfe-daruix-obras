@@ -92,6 +92,8 @@ export class MapasCotacao {
   readonly loading = signal(false);
   readonly busy = signal(false);
   readonly dirty = signal(false);
+  // Texto livre enquanto o input está focado; modelo mantém decimal sem símbolo de moeda.
+  readonly moneyEditing = signal<Record<string, string>>({});
   readonly error = signal('');
   readonly map = signal<QuotationMap | null>(null);
   readonly matches = signal<QuotationSupplier[]>([]);
@@ -264,6 +266,7 @@ export class MapasCotacao {
     this.supplierCount.set(0);
     this.supplierTerm.set('');
     this.dirty.set(false);
+    this.moneyEditing.set({});
     this.tenderDate.set('');
     this.tenderTime.set('');
     this.expandedCompositions.set(new Set());
@@ -326,6 +329,80 @@ export class MapasCotacao {
     offer.manual_override = !!offer.tender_unit_price;
     offer.price_source = offer.manual_override ? 'ADJUSTED' : 'MANUAL';
     this.dirty.set(true);
+  }
+
+  /** Aceita reais digitados sem centavos implícitos: 5 => 5.00, 5,5 => 5.50. */
+  private parseMoney(value: string | number | null | undefined): string | null {
+    if (value === null || value === undefined) return null;
+    const raw = String(value).replace(/\s|R\$/gi, '').trim();
+    if (!raw) return null;
+    // vírgula: pt-BR (1.500,25); ponto: decimal ou agrupamento de milhar.
+    let normalized: string;
+    if (raw.includes(',')) {
+      normalized = raw.replace(/\./g, '').replace(',', '.');
+    } else if (/^\d{1,3}(\.\d{3})+$/.test(raw)) {
+      normalized = raw.replace(/\./g, '');
+    } else {
+      normalized = raw;
+    }
+    if (!/^\d+(?:\.\d{0,6})?$/.test(normalized)) return null;
+    const amount = Number(normalized);
+    return Number.isFinite(amount) && amount >= 0 ? amount.toFixed(2) : null;
+  }
+
+  moneyFieldValue(key: string, stored: string | null | undefined): string {
+    const editing = this.moneyEditing();
+    if (Object.prototype.hasOwnProperty.call(editing, key)) return editing[key];
+    const decimal = this.parseMoney(stored);
+    return decimal === null ? '' : brlFormatter.format(Number(decimal));
+  }
+
+  beginMoneyEdit(key: string, stored: string | null | undefined): void {
+    if (!this.writable() || this.busy()) return;
+    const raw = stored === null || stored === undefined ? '' : String(stored);
+    this.moneyEditing.update(current => ({ ...current, [key]: raw }));
+  }
+
+  private storeTyping(key: string, typed: string): string | null {
+    this.moneyEditing.update(current => ({ ...current, [key]: typed }));
+    return this.parseMoney(typed);
+  }
+
+  private endMoneyEdit(key: string): void {
+    this.moneyEditing.update(current => {
+      const next = { ...current };
+      delete next[key];
+      return next;
+    });
+  }
+
+  updateOfferMoney(key: string, offer: QuotationOffer, typed: string): void {
+    const decimal = this.storeTyping(key, typed);
+    this.editOfferPrice(offer, decimal ?? '');
+  }
+
+  blurOfferMoney(key: string, offer: QuotationOffer): void {
+    const typed = this.moneyEditing()[key];
+    if (typed !== undefined) {
+      const decimal = this.parseMoney(typed);
+      if (decimal !== this.parseMoney(offer.unit_price)) this.editOfferPrice(offer, decimal ?? '');
+    }
+    this.endMoneyEdit(key);
+  }
+
+  updateQuoteMoney(key: string, quote: QuotationMap['quotes'][number], field: 'freight' | 'discount', typed: string): void {
+    const decimal = this.storeTyping(key, typed);
+    quote[field] = decimal ?? '';
+    this.dirty.set(true);
+  }
+
+  blurQuoteMoney(key: string, quote: QuotationMap['quotes'][number], field: 'freight' | 'discount'): void {
+    const typed = this.moneyEditing()[key];
+    if (typed !== undefined) {
+      quote[field] = this.parseMoney(typed) ?? '0.00';
+      this.dirty.set(true);
+    }
+    this.endMoneyEdit(key);
   }
 
   choose(offer: QuotationOffer): void {

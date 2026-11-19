@@ -41,7 +41,7 @@
                      [value]="invitationPassword()" (valueChange)="invitationPassword.set($event)"
                      [disabled]="busy()" />
           <label class="show-password"><input type="checkbox" [checked]="showPassword()" (change)="showPassword.set(!showPassword())" /> Mostrar senha</label>
-          <drx-button type="submit" [font]="'gothic'" [disabled]="busy() || !(invitationUsername() ?? '').trim() || !invitationPassword() || !invitationToken()">
+          <drx-button type="submit" [font]="'gothic'" [disabled]="busy() || !invitationUsername().trim() || !invitationPassword() || !invitationToken()">
             {{ busy() ? 'Validando acesso...' : 'Entrar no leilão' }}
           </drx-button>
         </form>

@@ -232,3 +232,13 @@ table:not(.comparison--with-quotes) {
   color: var(--drx-color-text-muted, #687386);
   font-size: var(--drx-font-size-caption, 12px);
 }
+
+/* Os editores monetários continuam usando o input do Design System. */
+.money-editor {
+  display: block;
+  min-inline-size: 0;
+}
+.money-editor drx-input {
+  display: block;
+  min-inline-size: 0;
+}

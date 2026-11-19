@@ -51,8 +51,18 @@
                 @for (quote of detail.quotes; track quote.supplier.id; let supplierIndex = $index) {
                   <th scope="col" class="supplier-heading">
                     {{ quote.supplier.name }}
-                    @if (writable()) {
-                      <drx-button variant="tertiary" size="small" [disabled]="busy()" (click)="detail.quotes.splice(supplierIndex, 1); dirty.set(true)">Remover</drx-button>
+                    @if (tenderPending()) {
+                      <drx-button variant="secondary" size="small"
+                        [disabled]="busy()"
+                        (click)="resendInvitation(quote.supplier.id)">
+                        Reenviar convite
+                      </drx-button>
+                    }
+                    @if (writable() && !tenderPending()) {
+                      <drx-button variant="tertiary" size="small" [disabled]="busy()"
+                        (click)="detail.quotes.splice(supplierIndex, 1); dirty.set(true)">
+                        Remover
+                      </drx-button>
                     }
                   </th>
                 }
@@ -94,7 +104,13 @@
                     @for (quote of detail.quotes; track quote.supplier.id) {
                       @if (quote.offers[itemIndex]; as offer) {
                         <td class="quote-cell" [class.quote-cell--selected]="offer.selected">
-                          <drx-input label="Unitário (R$)" inputMode="decimal" [value]="offer.unit_price ?? ''" (valueChange)="offer.unit_price = $event; dirty.set(true)" [disabled]="busy() || !writable()" />
+                          @let priceKey = 'item:' + quote.supplier.id + ':' + item.id;
+                          <div class="money-editor" (focusin)="beginMoneyEdit(priceKey, offer.unit_price)" (focusout)="blurOfferMoney(priceKey, offer)">
+                            <drx-input label="Unitário (R$)" inputMode="decimal"
+                              [value]="moneyFieldValue(priceKey, offer.unit_price)"
+                              (valueChange)="updateOfferMoney(priceKey, offer, $event)"
+                              [disabled]="busy() || !writable()" />
+                          </div>
                           <drx-input label="Observação" [maxLength]="4000" [value]="offer.notes" (valueChange)="offer.notes = $event; dirty.set(true)" [disabled]="busy() || !writable()" />
                           <small>Total {{ formatBrl(lineTotal(item, offer)) }}</small>
                           @if (offer.selected) {
@@ -120,8 +136,21 @@
                       <drx-input label="E-mail" type="email" [maxLength]="255" [value]="quote.supplier.email" (valueChange)="quote.supplier.email = $event; dirty.set(true)" [disabled]="busy() || !writable()" />
                       <drx-input label="Pagamento" [maxLength]="255" [value]="quote.payment" (valueChange)="quote.payment = $event; dirty.set(true)" [disabled]="busy() || !writable()" />
                       <drx-input label="Prazo de entrega" [maxLength]="255" [value]="quote.delivery" (valueChange)="quote.delivery = $event; dirty.set(true)" [disabled]="busy() || !writable()" />
-                      <drx-input label="Frete (R$)" inputMode="decimal" [value]="quote.freight" (valueChange)="quote.freight = $event; dirty.set(true)" [disabled]="busy() || !writable()" />
-                      <drx-input label="Desconto (R$)" inputMode="decimal" [value]="quote.discount" (valueChange)="quote.discount = $event; dirty.set(true)" [disabled]="busy() || !writable()" />
+
+                      @let freightKey = 'freight:' + quote.supplier.id;
+                      <div class="money-editor" (focusin)="beginMoneyEdit(freightKey, quote.freight)" (focusout)="blurQuoteMoney(freightKey, quote, 'freight')">
+                        <drx-input label="Frete (R$)" inputMode="decimal"
+                          [value]="moneyFieldValue(freightKey, quote.freight)"
+                          (valueChange)="updateQuoteMoney(freightKey, quote, 'freight', $event)"
+                          [disabled]="busy() || !writable()" />
+                      </div>
+                      @let discountKey = 'discount:' + quote.supplier.id;
+                      <div class="money-editor" (focusin)="beginMoneyEdit(discountKey, quote.discount)" (focusout)="blurQuoteMoney(discountKey, quote, 'discount')">
+                        <drx-input label="Desconto (R$)" inputMode="decimal"
+                          [value]="moneyFieldValue(discountKey, quote.discount)"
+                          (valueChange)="updateQuoteMoney(discountKey, quote, 'discount', $event)"
+                          [disabled]="busy() || !writable()" />
+                      </div>
                       <drx-textarea label="Observações" [rows]="2" [maxLength]="4000" [value]="quote.notes" (valueChange)="quote.notes = $event; dirty.set(true)" [disabled]="busy() || !writable()" />
                     </td>
                   }
