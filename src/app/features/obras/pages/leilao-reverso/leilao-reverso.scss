@@ -68,3 +68,15 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 .portal-panel-title { margin:0 0 18px; font:800 19px var(--drx-font-family-display,'Science Gothic',sans-serif); color:#252831; }
 .portal-info { padding:14px 18px; border:1px solid #dce2ec; border-radius:9px; background:#fff; font-size:13px; color:#687386; }
 @media (max-width:540px) { .portal-panel { padding:15px; } .portal-content { padding-left:12px; padding-right:12px; } }
+
+/* Campos monetários e condição de pagamento no portal externo. */
+.terms-grid select {
+  width: 100%; box-sizing: border-box; padding: 11px 12px;
+  border: 1px solid #d4d9e2; border-radius: 8px;
+  background: #fff; color: #252831; font: inherit; font-weight: 400;
+  min-height: 42px;
+}
+.currency-input { font-variant-numeric: tabular-nums; }
+.terms-grid select:focus-visible, .currency-input:focus-visible {
+  outline: 2px solid #c00d0e; outline-offset: 1px;
+}

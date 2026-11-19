@@ -74,17 +74,26 @@
                 <tbody>@for (item of tender.items; track item.id; let index = $index) {
                   <tr><th scope="row">{{ item.description }}</th><td>{{ item.quantity }} {{ item.unit }} @if (item.period) { · {{ item.period }} {{ item.period_unit }} }</td>
                     <td>@if (tender.participating) {
-                      <label>Preço unitário (R$) <input inputmode="decimal" [(ngModel)]="bid.offers[index].unit_price" /></label>
+                      <label>Preço unitário (R$) <input type="text" inputmode="decimal" autocomplete="off" placeholder="R$ 0,00" class="currency-input" [value]="formatMoney(bid.offers[index].unit_price)" (focus)="beginMoneyEdit($event, bid.offers[index].unit_price)" (blur)="updateOfferMoney($event, bid, index)" /></label>
                       <label>Observação <input [(ngModel)]="bid.offers[index].notes" maxlength="4000" /></label>
                     }</td></tr>
                 }</tbody></table></div>
               @if (tender.participating) {
                 <div class="terms-grid">
-                  <label>Pagamento <input [(ngModel)]="bid.payment" maxlength="255" /></label>
+                  <label>Pagamento
+                    <select [(ngModel)]="bid.payment" aria-label="Condição de pagamento">
+                      <option value="">Selecione uma condição</option>
+                      @for (condition of paymentOptions; track condition) {
+                        <option [value]="condition">{{ condition }}</option>
+                      }
+                      @if (bid.payment && !paymentOptions.includes(bid.payment)) {
+                        <option [value]="bid.payment">{{ bid.payment }} (condição anterior)</option>
+                      }
+                    </select>
+                  </label>
                   <label>Prazo de entrega <input [(ngModel)]="bid.delivery" maxlength="255" /></label>
-                  <label>Data da proposta <input type="date" [(ngModel)]="bid.quoted_on" /></label>
-                  <label>Frete (R$) <input inputmode="decimal" [(ngModel)]="bid.freight" /></label>
-                  <label>Desconto (R$) <input inputmode="decimal" [(ngModel)]="bid.discount" /></label>
+                  <label>Frete (R$) <input type="text" inputmode="decimal" autocomplete="off" placeholder="R$ 0,00" class="currency-input" [value]="formatMoney(bid.freight)" (focus)="beginMoneyEdit($event, bid.freight)" (blur)="updateTermsMoney($event, bid, 'freight')" /></label>
+                  <label>Desconto (R$) <input type="text" inputmode="decimal" autocomplete="off" placeholder="R$ 0,00" class="currency-input" [value]="formatMoney(bid.discount)" (focus)="beginMoneyEdit($event, bid.discount)" (blur)="updateTermsMoney($event, bid, 'discount')" /></label>
                   <label class="terms-notes">Observações <textarea [(ngModel)]="bid.notes" maxlength="4000"></textarea></label>
                 </div>
                 <div class="form-actions"><drx-button [font]="'gothic'" [disabled]="busy()" (click)="send(tender.id, bid)">{{ tender.own_offer ? 'Atualizar minha proposta' : 'Enviar minha proposta' }}</drx-button></div>

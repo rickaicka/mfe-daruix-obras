@@ -11,13 +11,12 @@
       <div class="map-summary">
         <div><span>Requisição de materiais</span><strong>{{ displayRmNumber(detail.rm) }}</strong></div>
         <div><span>Obra</span><strong>{{ detail.work }}</strong></div>
-        <div><span>Comprador</span><strong>{{ detail.buyer?.name || "Não informado" }}</strong></div>
         <div><span>Status</span><drx-badge [label]="status[detail.status]" [tone]="statusTones[detail.status]" /></div>
       </div>
     </drx-card-square>
 
     <fieldset [disabled]="busy() || !writable()">
-      @if (writable() && !tenderPending()) {
+      @if (writable()) {
         <drx-card-square nome="Fornecedores">
           <drx-badge card-header-action [label]="detail.quotes.length + ' de 6 fornecedores'" />
           <form class="supplier-search" (ngSubmit)="searchSuppliers()">
@@ -43,10 +42,6 @@
         </drx-card-square>
       }
 
-      <div class="comparison-refresh">
-        <drx-button variant="secondary" size="small" [disabled]="busy() || dirty()" (click)="refreshComparison()">Atualizar propostas</drx-button>
-        @if (dirty()) { <small>Salve as alterações antes de atualizar as propostas.</small> }
-      </div>
       <drx-card-square nome="Comparativo de fornecedores">
         <div class="table-scroll" tabindex="0" aria-label="Comparativo de fornecedores">
           <table [class.comparison--with-quotes]="detail.quotes.length > 0">
@@ -56,7 +51,7 @@
                 @for (quote of detail.quotes; track quote.supplier.id; let supplierIndex = $index) {
                   <th scope="col" class="supplier-heading">
                     {{ quote.supplier.name }}
-                    @if (writable() && !tenderPending()) {
+                    @if (writable()) {
                       <drx-button variant="tertiary" size="small" [disabled]="busy()" (click)="detail.quotes.splice(supplierIndex, 1); dirty.set(true)">Remover</drx-button>
                     }
                   </th>
@@ -99,17 +94,7 @@
                     @for (quote of detail.quotes; track quote.supplier.id) {
                       @if (quote.offers[itemIndex]; as offer) {
                         <td class="quote-cell" [class.quote-cell--selected]="offer.selected">
-                          <drx-input label="Unitário (R$)" inputMode="decimal" [value]="offer.unit_price ?? ''" (valueChange)="editOfferPrice(offer, $event)" [disabled]="busy() || !writable()" />
-                          @if (offer.price_source === 'TENDER') {
-                            <small class="price-origin price-origin--tender" [attr.title]="'Recebido em ' + (offer.tender_updated_at ?? 'data não informada')">Valor do leilão</small>
-                          } @else if (offer.price_source === 'ADJUSTED') {
-                            <small class="price-origin price-origin--adjusted">Ajustado pelo comprador</small>
-                            @if (offer.tender_unit_price !== null && offer.tender_unit_price !== undefined && writable()) {
-                              <drx-button variant="tertiary" size="small" (click)="restoreTenderPrice(offer)">Restaurar valor do leilão ({{ formatBrl(offer.tender_unit_price) }})</drx-button>
-                            }
-                          } @else {
-                            <small class="price-origin">Cotação manual</small>
-                          }
+                          <drx-input label="Unitário (R$)" inputMode="decimal" [value]="offer.unit_price ?? ''" (valueChange)="offer.unit_price = $event; dirty.set(true)" [disabled]="busy() || !writable()" />
                           <drx-input label="Observação" [maxLength]="4000" [value]="offer.notes" (valueChange)="offer.notes = $event; dirty.set(true)" [disabled]="busy() || !writable()" />
                           <small>Total {{ formatBrl(lineTotal(item, offer)) }}</small>
                           @if (offer.selected) {
@@ -133,13 +118,9 @@
                       <drx-input label="Contato" [maxLength]="255" [value]="quote.supplier.contact" (valueChange)="quote.supplier.contact = $event; dirty.set(true)" [disabled]="busy() || !writable()" />
                       <drx-input label="Telefone" [maxLength]="255" [value]="quote.supplier.phone" (valueChange)="quote.supplier.phone = $event; dirty.set(true)" [disabled]="busy() || !writable()" />
                       <drx-input label="E-mail" type="email" [maxLength]="255" [value]="quote.supplier.email" (valueChange)="quote.supplier.email = $event; dirty.set(true)" [disabled]="busy() || !writable()" />
-                      @if (quote.supplier.payment_terms !== undefined || quote.supplier.delivery_terms !== undefined) {
-                        <drx-button variant="tertiary" size="small" [disabled]="busy() || !writable()"
-                          (click)="applySupplierTerms(quote)">Aplicar condições do cadastro</drx-button>
-                      }
                       <drx-input label="Pagamento" [maxLength]="255" [value]="quote.payment" (valueChange)="quote.payment = $event; dirty.set(true)" [disabled]="busy() || !writable()" />
                       <drx-input label="Prazo de entrega" [maxLength]="255" [value]="quote.delivery" (valueChange)="quote.delivery = $event; dirty.set(true)" [disabled]="busy() || !writable()" />
-                      <drx-calendar label="Data da proposta do fornecedor" [value]="quote.quoted_on ?? ''" (valueChange)="quote.quoted_on = $event || null; dirty.set(true)" [disabled]="busy() || !writable()" />
+                      <drx-input label="Validade" [maxLength]="255" [value]="quote.validity" (valueChange)="quote.validity = $event; dirty.set(true)" [disabled]="busy() || !writable()" />
                       <drx-input label="Frete (R$)" inputMode="decimal" [value]="quote.freight" (valueChange)="quote.freight = $event; dirty.set(true)" [disabled]="busy() || !writable()" />
                       <drx-input label="Desconto (R$)" inputMode="decimal" [value]="quote.discount" (valueChange)="quote.discount = $event; dirty.set(true)" [disabled]="busy() || !writable()" />
                       <drx-textarea label="Observações" [rows]="2" [maxLength]="4000" [value]="quote.notes" (valueChange)="quote.notes = $event; dirty.set(true)" [disabled]="busy() || !writable()" />
@@ -169,16 +150,6 @@
             Publicar leilão e convidar fornecedores
           </drx-button>
         </div>
-      </drx-card-square>
-    }
-    @if (tenderPending() && detail.status === 'DRAFT') {
-      <drx-card-square nome="Reenviar convites">
-        @for (quote of detail.quotes; track quote.supplier.id) {
-          <div class="tender-actions">
-            <span>{{ quote.supplier.name }} ({{ quote.supplier.email }})</span>
-            <drx-button variant="secondary" size="small" [disabled]="busy()" (click)="resendInvitation(quote.supplier.id)">Reenviar convite</drx-button>
-          </div>
-        }
       </drx-card-square>
     }
     @if (tenderPending() && detail.status === 'DRAFT') {
